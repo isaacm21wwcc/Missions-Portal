@@ -295,7 +295,7 @@
   /* ── PROFILE VIEW ── */
   .profile-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
   .pgroup { margin-bottom: 1.25rem; }
-  .pgroup-title { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 7px; border-bottom: 1px solid var(--gray-200); margin-bottom: 10px; }
+  .pgroup-title { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 7px; border-bottom: 1px solid var(--gray-200); margin-bottom: 0.75rem; }
   .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
   .pitem label { font-size: 11px; color: var(--gray-400); display: block; margin-bottom: 2px; }
   .pitem span { font-size: 14px; color: var(--gray-800); }
@@ -320,7 +320,7 @@
   .sched-table th { font-size: 11px; font-weight: 700; color: var(--gray-400); text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--gray-200); text-transform: uppercase; letter-spacing: 0.04em; }
   .sched-table td { padding: 8px 8px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
   .sched-table tr:last-child td { border-bottom: none; }
-  .sched-table input { font-size: 13px; padding: 5px 8px; border: 1px solid var(--gray-300); border-radius: 8px; font-family: inherit; background: #fff; color: var(--gray-900); width: 100%; outline: none; }
+  .sched-table input { font-size: 13px; padding: 5px 8px; border: 1px solid var(--gray-300); border-radius: 8px; font-family: inherit; background: #fff; color: var(--gray-900); width: 100%; outline: none; transition: border-color 0.15s; }
   .sched-table input:focus { border-color: var(--brand); }
   .sched-table input:disabled { background: var(--gray-100); color: var(--gray-400); }
   .sched-table tr.final-row td { border-top: 1px dashed var(--gray-300); }
@@ -366,6 +366,199 @@
     .app-body { padding: 1.25rem 1rem; }
   }
 </style>
+<script>
+  // ── Apps Script endpoint ──
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9bDSmmC_qnwBiY5OZe_caVkGSKWtuoEcOJGCrGTI8w_s4p4POuh94Uu01p5b6IzXk/exec';
+  const ADMIN_PASSWORD  = 'gcyouth2027'; // Change to match Code.gs
+
+  // ── Helpers ──
+  function $(id) { return document.getElementById(id); }
+  function v(id) { const e=$(id); return e ? e.value.trim() : ''; }
+  function setBtn(id, loading, label) { const b=$(id); if(!b)return; b.disabled=loading; b.innerHTML=loading?'<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px"></span>'+label:label; }
+
+  // ── Call Apps Script via JSONP (bypasses CORS restriction) ──
+  function callAS(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'cb_' + fn + '_' + Date.now();
+      const url = APPS_SCRIPT_URL
+        + '?fn='       + encodeURIComponent(fn)
+        + '&args='     + encodeURIComponent(JSON.stringify(args))
+        + '&callback=' + cbName;
+
+      window[cbName] = function(data) {
+        resolve(data);
+        delete window[cbName];
+        document.getElementById(cbName) && document.getElementById(cbName).remove();
+      };
+
+      const script = document.createElement('script');
+      script.id  = cbName;
+      script.src = url;
+      script.onerror = function() {
+        reject(new Error('Apps Script connection failed.'));
+        delete window[cbName];
+        script.remove();
+      };
+      setTimeout(() => {
+        if (window[cbName]) {
+          reject(new Error('Apps Script request timed out.'));
+          delete window[cbName];
+          script.remove();
+        }
+      }, 15000);
+      document.head.appendChild(script);
+    });
+  }
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(style);
+
+  // ── Login ──
+  function showScreen(id) {
+    document.getElementById('screen-login').style.display = id === 'screen-login' ? 'flex' : 'none';
+    document.getElementById('admin-app').style.display = id === 'admin-app' ? 'block' : 'none';
+  }
+
+  function doLogin() {
+    const pw    = document.getElementById('login-pw').value;
+    const errEl = document.getElementById('login-error');
+
+    function showErr(msg) {
+      if (errEl) { errEl.style.display='flex'; errEl.querySelector('div').textContent=msg; }
+      else alert(msg);
+    }
+
+    if (!pw) { showErr('Please enter your password.'); return; }
+    if (pw !== ADMIN_PASSWORD) {
+      showErr('Incorrect password. Please try again.');
+      document.getElementById('login-pw').value = '';
+      document.getElementById('login-pw').focus();
+      return;
+    }
+
+    if (errEl) errEl.style.display = 'none';
+    showScreen('admin-app');
+
+    // Load all data from Google Sheet
+    setTimeout(() => initAdminData(), 100);
+  }
+
+  // ── Load participants from Apps Script ──
+  async function loadParticipants() {
+    document.getElementById('ptBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400);"><span style="display:inline-block;width:18px;height:18px;border:2px solid var(--gray-300);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite"></span></td></tr>';
+    try {
+      const parts = await callAS('getAllParticipants');
+      if (parts.error) { console.error(parts.error); return; }
+      allParticipants = parts;
+      renderTable(parts);
+    } catch(e) {
+      console.error('Load error:', e);
+    }
+  }
+
+  // ── Save new participant (simple form) ──
+  async function saveParticipant() {
+    const fn    = v('r-fname');
+    const ln    = v('r-lname');
+    const email = v('r-email');
+    const errEl = $('reg-error');
+
+    function showRegErr(msg) {
+      if (errEl) { errEl.style.display='flex'; errEl.querySelector('div').textContent=msg; }
+      else alert(msg);
+    }
+
+    if (!fn)    { showRegErr('Please enter a first name.'); return; }
+    if (!ln)    { showRegErr('Please enter a last name.'); return; }
+    if (!email) { showRegErr('Please enter an email address.'); return; }
+    if (errEl)    errEl.style.display = 'none';
+
+    setBtn('save-reg-btn', true, '<i class="ti ti-send"></i> Sending invite…');
+
+    try {
+      const data = {
+        firstName: fn,
+        lastName:  ln,
+        email:     email,
+        mobile:    v('r-mobile'),
+        notes:     v('r-notes'),
+      };
+
+      const res = await callAS('registerParticipant', data);
+      if (!res || res.error) {
+        showRegErr(res && res.error ? res.error : 'Could not connect. Make sure Apps Script is deployed as a Web App with access set to Anyone.');
+        setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
+        return;
+      }
+
+      // Send invite email
+      const inviteRes = await callAS('sendInviteEmail', res.id);
+      if (inviteRes && inviteRes.error) console.warn('Invite email warning:', inviteRes.error);
+
+      setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
+      $('regForm').style.display = 'none';
+      $('regDone').style.display = 'block';
+      $('reg-done-name').textContent = fn + ' ' + ln;
+      loadParticipants();
+    } catch(e) {
+      setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
+      showRegErr('Connection error. Please try again.');
+    }
+  }
+
+  function clearRegForm() {
+    ['r-fname','r-lname','r-mobile','r-email','r-notes'].forEach(id => {
+      const el = $(id); if (el) el.value = '';
+    });
+    const errEl = $('reg-error');
+    if (errEl) errEl.style.display = 'none';
+  }
+
+  function registerAnother() {
+    clearRegForm();
+    $('regForm').style.display = 'block';
+    $('regDone').style.display = 'none';
+  }
+
+  // ── Tab navigation ──
+  const tabNames = ['participants','register','profile','schedule','pending','alerts'];
+
+  function goTab(name) {
+    tabNames.forEach((t, i) => {
+      document.querySelectorAll('.tabs .tab')[i].classList.toggle('active', t === name);
+      document.getElementById('t-' + t).classList.toggle('active', t === name);
+    });
+    if (name === 'participants') loadParticipants();
+    if (name === 'pending')      loadPending();
+  }
+
+  // ── Live participant data — loaded from Google Sheet only ──
+  let ALL_PARTICIPANTS = [];
+  let CUR_FILTER = 'all';
+
+  function fmt(n) { return '$' + Number(n || 0).toLocaleString(); }
+
+  function pct(p) {
+    const total = p.total || p.tripTotal || 3450;
+    const paid  = p.paid  || p.totalPaid || 0;
+    return total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+  }
+
+  function barColor(p) {
+    const paid = p.paid || p.totalPaid || 0;
+    if (!p.depositPaid && paid === 0) return '#f59e0b';
+    if (pct(p) >= 100) return '#2d7a3a';
+    return '#3b72c8';
+  }
+
+  // Stubs for functions called from HTML
+  async function initAdminData() { console.log('Admin data init'); }
+  async function renderTable(parts) { console.log('Render table'); }
+  function doFilter(filter, el) { console.log('Filter:', filter); }
+  function doSearch(val) { console.log('Search:', val); }
+  async function loadPending() { console.log('Load pending'); }
+  function approveChange(id, name, section) { console.log('Approve:', id, name, section); }
+</script>
 </head>
 <body>
 
@@ -482,7 +675,7 @@
             <div class="form-group"><label>Last name</label><input type="text" id="r-lname" placeholder=""></div>
             <div class="form-group"><label>Mobile number</label><input type="tel" id="r-mobile" placeholder="+61 4XX XXX XXX"></div>
             <div class="form-group"><label>Email address</label><input type="email" id="r-email" placeholder="jordan@email.com" onkeydown="if(event.key==='Enter')saveParticipant()"></div>
-            <div class="form-group form-full"><label>Notes (optional — admin only)</label><textarea id="r-notes" rows="2" placeholder="Any relevant notes about this participant…" style="resize:vertical;font-family:inherit;font-size:13px;"></textarea></div>
+            <div class="form-group form-full"><label>Notes (optional — admin only)</label><textarea id="r-notes" rows="2" placeholder="Any relevant notes about this participant…" style="resize:vertical;"></textarea></div>
           </div>
           <div id="reg-error" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:12px;align-items:center;gap:8px;">
             <i class="ti ti-alert-circle"></i><div></div>
@@ -496,7 +689,7 @@
         <div id="regDone" style="display:none;">
           <div class="alert alert-green" style="margin-bottom:1.25rem;">
             <i class="ti ti-circle-check"></i>
-            <div><strong>Done!</strong> <span id="reg-done-name"></span> has been registered and their invite email is on its way. They'll appear in the participants list once their account is active.</div>
+            <div><strong>Done!</strong> <span id="reg-done-name"></span> has been registered and their invite email is on its way. They'll appear in the participants list once their account is activated.</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-primary" onclick="registerAnother()"><i class="ti ti-user-plus"></i> Register another</button>
@@ -594,17 +787,17 @@
             <div class="pgroup">
               <div class="pgroup-title">Participant journey</div>
               <div class="journey">
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Profile created</div><div class="j-sub">—</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Invite sent &amp; account activated</div><div class="j-sub">—</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Payment schedule set</div><div class="j-sub">—</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Deposit paid</div><div class="j-sub">—</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Profile created</div><div class="j-sub">19 Feb 2026</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Invite sent &amp; account activated</div><div class="j-sub">20 Feb 2026</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Payment schedule set</div><div class="j-sub">20 Feb 2026</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Deposit paid</div><div class="j-sub">22 Feb 2026</div></div></div>
                 <div class="j-step"><div class="j-dot now" style="font-size:8px">···</div><div class="j-line"></div><div><div class="j-title">Ongoing payments</div><div class="j-sub">—</div></div></div>
                 <div class="j-step"><div class="j-dot future">6</div><div class="j-line"></div><div><div class="j-title">Fully paid</div><div class="j-sub">Due by 1 Jul 2027</div></div></div>
               </div>
             </div>
             <div class="pgroup">
               <div class="pgroup-title">Admin notes</div>
-              <textarea style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);min-height:80px;resize:vertical;outline:none;" placeholder="Add a note about this participant…"></textarea>
+              <textarea style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);min-height:80px;outline:none;resize:vertical;"></textarea>
               <button class="btn btn-sm" style="margin-top:8px;"><i class="ti ti-device-floppy"></i> Save note</button>
             </div>
           </div>
@@ -627,7 +820,7 @@
 
         <div class="alert alert-green" style="margin-bottom:1.25rem;">
           <i class="ti ti-info-circle"></i>
-          <div>The <strong>deposit ($500)</strong> is fixed and required before the student can access their portal. All other milestones are editable. Students may pay in any instalment amounts as long as the full balance is cleared by the final cutoff date.</div>
+          <div>The <strong>deposit ($500)</strong> is fixed and required before the student can access their portal. All other milestones are editable. Students may pay in any instalment amounts.</div>
         </div>
 
         <table class="sched-table">
@@ -814,364 +1007,5 @@
   </div><!-- /app-body -->
 </div><!-- /admin-app -->
 
-<script>
-  // ── Apps Script endpoint ──
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9bDSmmC_qnwBiY5OZe_caVkGSKWtuoEcOJGCrGTI8w_s4p4POuh94Uu01p5b6IzXk/exec';
-  const ADMIN_PASSWORD  = 'gcyouth2027'; // Change to match Code.gs
-
-  // ── Helpers ──
-  function $(id) { return document.getElementById(id); }
-  function v(id) { const e=$(id); return e ? e.value.trim() : ''; }
-  function setBtn(id, loading, label) { const b=$(id); if(!b)return; b.disabled=loading; b.innerHTML=loading?'<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:6px;"></span>Please wait…':label; }
-  // ── Call Apps Script via JSONP (bypasses CORS restriction) ──
-  function callAS(fn, ...args) {
-    return new Promise((resolve, reject) => {
-      const cbName = 'cb_' + fn + '_' + Date.now();
-      const url = APPS_SCRIPT_URL
-        + '?fn='       + encodeURIComponent(fn)
-        + '&args='     + encodeURIComponent(JSON.stringify(args))
-        + '&callback=' + cbName;
-
-      window[cbName] = function(data) {
-        resolve(data);
-        delete window[cbName];
-        document.getElementById(cbName) && document.getElementById(cbName).remove();
-      };
-
-      const script = document.createElement('script');
-      script.id  = cbName;
-      script.src = url;
-      script.onerror = function() {
-        reject(new Error('Apps Script connection failed.'));
-        delete window[cbName];
-        script.remove();
-      };
-      setTimeout(() => {
-        if (window[cbName]) {
-          reject(new Error('Apps Script request timed out.'));
-          delete window[cbName];
-          script.remove();
-        }
-      }, 15000);
-      document.head.appendChild(script);
-    });
-  }
-  const style = document.createElement('style');
-  style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
-  document.head.appendChild(style);
-
-  // ── Login ──
-  function showScreen(id) {
-    document.getElementById('screen-login').style.display = id === 'screen-login' ? 'flex' : 'none';
-    document.getElementById('admin-app').style.display = id === 'admin-app' ? 'block' : 'none';
-  }
-
-  function doLogin() {
-    const pw    = document.getElementById('login-pw').value;
-    const errEl = document.getElementById('login-error');
-
-    function showErr(msg) {
-      if (errEl) { errEl.style.display='flex'; errEl.querySelector('div').textContent=msg; }
-      else alert(msg);
-    }
-
-    if (!pw) { showErr('Please enter your password.'); return; }
-    if (pw !== ADMIN_PASSWORD) {
-      showErr('Incorrect password. Please try again.');
-      document.getElementById('login-pw').value = '';
-      document.getElementById('login-pw').focus();
-      return;
-    }
-
-    if (errEl) errEl.style.display = 'none';
-    showScreen('admin-app');
-
-    // Load all data from Google Sheet
-    setTimeout(() => initAdminData(), 100);
-  }
-
-  // ── Load participants from Apps Script ──
-  async function loadParticipants() {
-    document.getElementById('ptBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400);"><span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(0,0,0,.15);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-4px;margin-right:8px;"></span>Loading participants…</td></tr>';
-    try {
-      const parts = await callAS('getAllParticipants');
-      if (parts.error) { console.error(parts.error); return; }
-      allParticipants = parts;
-      renderTable(parts);
-    } catch(e) {
-      console.error('Load error:', e);
-    }
-  }
-
-  // ── Save new participant (simple form) ──
-  async function saveParticipant() {
-    const fn    = v('r-fname');
-    const ln    = v('r-lname');
-    const email = v('r-email');
-    const errEl = $('reg-error');
-
-    function showRegErr(msg) {
-      if (errEl) { errEl.style.display='flex'; errEl.querySelector('div').textContent=msg; }
-      else alert(msg);
-    }
-
-    if (!fn)    { showRegErr('Please enter a first name.'); return; }
-    if (!ln)    { showRegErr('Please enter a last name.'); return; }
-    if (!email) { showRegErr('Please enter an email address.'); return; }
-    if (errEl)    errEl.style.display = 'none';
-
-    setBtn('save-reg-btn', true, '<i class="ti ti-send"></i> Sending invite…');
-
-    try {
-      const data = {
-        firstName: fn,
-        lastName:  ln,
-        email:     email,
-        mobile:    v('r-mobile'),
-        notes:     v('r-notes'),
-      };
-
-      const res = await callAS('registerParticipant', data);
-      if (!res || res.error) {
-        showRegErr(res && res.error ? res.error : 'Could not connect. Make sure Apps Script is deployed as a Web App with access set to Anyone.');
-        setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
-        return;
-      }
-
-      // Send invite email
-      const inviteRes = await callAS('sendInviteEmail', res.id);
-      if (inviteRes && inviteRes.error) console.warn('Invite email warning:', inviteRes.error);
-
-      setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
-      $('regForm').style.display = 'none';
-      $('regDone').style.display = 'block';
-      $('reg-done-name').textContent = fn + ' ' + ln;
-      loadParticipants();
-    } catch(e) {
-      setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
-      showRegErr('Connection error. Please try again.');
-    }
-  }
-
-  function clearRegForm() {
-    ['r-fname','r-lname','r-mobile','r-email','r-notes'].forEach(id => {
-      const el = $(id); if (el) el.value = '';
-    });
-    const errEl = $('reg-error');
-    if (errEl) errEl.style.display = 'none';
-  }
-
-  function registerAnother() {
-    clearRegForm();
-    $('regForm').style.display = 'block';
-    $('regDone').style.display = 'none';
-  }
-
-  // ── Tab navigation ──
-  const tabNames = ['participants','register','profile','schedule','pending','alerts'];
-
-  function goTab(name) {
-    tabNames.forEach((t, i) => {
-      document.querySelectorAll('.tabs .tab')[i].classList.toggle('active', t === name);
-      document.getElementById('t-' + t).classList.toggle('active', t === name);
-    });
-    if (name === 'participants') loadParticipants();
-    if (name === 'pending')      loadPending();
-  }
-
-  // ── Live participant data — loaded from Google Sheet only ──
-  let ALL_PARTICIPANTS = [];
-  let CUR_FILTER = 'all';
-
-  function fmt(n) { return '$' + Number(n || 0).toLocaleString(); }
-
-  function pct(p) {
-    const total = p.total || p.tripTotal || 3450;
-    const paid  = p.paid  || p.totalPaid || 0;
-    return total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
-  }
-
-  function barColor(p) {
-    const paid = p.paid || p.totalPaid || 0;
-    if (!p.depositPaid && paid === 0) return '#f59e0b';
-    if (pct(p) >= 100) return '#2d7a3a';
-    return '#3b72c8';
-  }
-
-  function statusBadge(p) {
-    const paid  = p.paid  || p.totalPaid || 0;
-    const total = p.total || p.tripTotal || 3450;
-    if (paid >= total)        return '<span class="badge b-green">Fully paid</span>';
-    if (!p.depositPaid)       return '<span class="badge b-amber">No deposit</span>';
-    return '<span class="badge b-blue">On track</span>';
-  }
-
-  function getInitials(name) {
-    const parts = (name || '').split(' ');
-    return (parts[0] ? parts[0][0] : '') + (parts[1] ? parts[1][0] : '');
-  }
-
-  const AV_COLORS = ['av-blue','av-green','av-purple','av-coral','av-teal','av-pink'];
-
-  function renderTable(list) {
-    const body = document.getElementById('ptBody');
-    if (!body) return;
-
-    if (!list || list.length === 0) {
-      body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--gray-400);font-size:14px;">' +
-        '<i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>' +
-        'No participants yet. <span style="color:var(--brand);cursor:pointer;text-decoration:underline;" onclick="goTab('register')">Register the first one →</span>' +
-        '</td></tr>';
-      return;
-    }
-
-    body.innerHTML = list.map((p, i) => {
-      const ini    = getInitials(p.name || '');
-      const av     = AV_COLORS[i % AV_COLORS.length];
-      const pc     = pct(p);
-      const paid   = p.paid || p.totalPaid || 0;
-      const total  = p.total || p.tripTotal || 3450;
-      const rem    = total - paid;
-      return '<tr class="clickrow" onclick="viewParticipant('' + (p.id || '') + '')">' +
-        '<td><div class="namecell"><div class="av ' + av + '">' + ini + '</div>' +
-        '<div><div style="font-weight:600">' + (p.name || '') + '</div>' +
-        '<div style="font-size:12px;color:var(--gray-400)">' + (p.email || '') + '</div></div></div></td>' +
-        '<td>' + (p.profileComplete === 'Yes' ? '<span class="badge b-green">Complete</span>' : '<span class="badge b-amber">Incomplete</span>') + '</td>' +
-        '<td>' + (p.depositPaid ? '<span class="badge b-green">Paid</span>' : '<span class="badge b-red">None</span>') + '</td>' +
-        '<td style="font-weight:600;color:var(--green)">' + fmt(paid) + '</td>' +
-        '<td style="color:var(--gray-500)">' + fmt(rem) + '</td>' +
-        '<td><div style="display:flex;align-items:center;gap:8px;">' +
-        '<div class="mini-bar-wrap"><div class="mini-bar" style="width:' + pc + '%;background:' + barColor(p) + '"></div></div>' +
-        '<span style="font-size:12px;color:var(--gray-400)">' + pc + '%</span>' +
-        statusBadge(p) + '</div></td>' +
-        '<td><span style="font-size:13px;color:var(--brand);font-weight:500;cursor:pointer">View →</span></td>' +
-        '</tr>';
-    }).join('');
-
-    // Update metrics
-    const total_p   = list.length;
-    const complete  = list.filter(p => p.profileComplete === 'Yes').length;
-    const deposits  = list.filter(p => p.depositPaid).length;
-    if ($('m-total'))    $('m-total').textContent    = total_p;
-    if ($('m-profiles')) $('m-profiles').textContent = complete + ' / ' + total_p;
-    if ($('m-deposits')) $('m-deposits').textContent = deposits + ' / ' + total_p;
-    if ($('m-overdue'))  $('m-overdue').textContent  = list.filter(p => p.status === 'overdue').length;
-  }
-
-  function doFilter(f, btn) {
-    CUR_FILTER = f;
-    document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
-    if (btn) btn.classList.add('on');
-    applyFilter();
-  }
-
-  function applyFilter() {
-    let list = ALL_PARTICIPANTS;
-    if (CUR_FILTER === 'overdue')    list = list.filter(p => p.status === 'overdue');
-    if (CUR_FILTER === 'incomplete') list = list.filter(p => p.profileComplete !== 'Yes');
-    if (CUR_FILTER === 'no-deposit') list = list.filter(p => !p.depositPaid);
-    if (CUR_FILTER === 'paid')       list = list.filter(p => (p.paid || p.totalPaid || 0) >= (p.total || p.tripTotal || 3450));
-    renderTable(list);
-  }
-
-  function doSearch(val) {
-    const q = val.toLowerCase();
-    let list = ALL_PARTICIPANTS;
-    if (CUR_FILTER !== 'all') {
-      if (CUR_FILTER === 'overdue')    list = list.filter(p => p.status === 'overdue');
-      if (CUR_FILTER === 'incomplete') list = list.filter(p => p.profileComplete !== 'Yes');
-      if (CUR_FILTER === 'no-deposit') list = list.filter(p => !p.depositPaid);
-      if (CUR_FILTER === 'paid')       list = list.filter(p => (p.paid||p.totalPaid||0) >= (p.total||p.tripTotal||3450));
-    }
-    list = list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.email||'').toLowerCase().includes(q));
-    renderTable(list);
-  }
-
-  function viewParticipant(id) {
-    goTab('profile');
-    // Profile view will be populated when sheet data is loaded
-  }
-
-  async function loadParticipants() {
-    const body = document.getElementById('ptBody');
-    if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400);">' +
-      '<span class="spinner spinner-dark"></span> Loading participants from sheet…</td></tr>';
-    try {
-      const parts = await callAS('getAllParticipants');
-      if (!parts || parts.error) {
-        if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--red);">Could not load participants. Check Apps Script connection.</td></tr>';
-        return;
-      }
-      ALL_PARTICIPANTS = Array.isArray(parts) ? parts : [];
-      applyFilter();
-      // Populate payment schedule dropdown
-      const sel = document.getElementById('pmt-participant');
-      if (sel) {
-        sel.innerHTML = '<option value="">Select participant…</option>' +
-          ALL_PARTICIPANTS.map(p => '<option value="' + p.id + '">' + p.name + ' (' + (p.email||'') + ')</option>').join('');
-      }
-    } catch(e) {
-      console.error('loadParticipants error:', e);
-      if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--red);">Connection error. Please refresh.</td></tr>';
-    }
-  }
-
-  function resetReg() {
-    clearRegForm();
-    if ($('regForm')) $('regForm').style.display = 'block';
-    if ($('regDone')) $('regDone').style.display = 'none';
-  }
-
-  // ── Approve pending change (visual only — real approval goes via Apps Script) ──
-  async function approveChange(rowId, participantId, section) {
-    try {
-      await callAS('approveProfileSection', participantId, section);
-      const row = document.getElementById(rowId);
-      if (row) {
-        row.classList.remove('pending');
-        row.classList.add('approved');
-        const actions = row.querySelector('.sync-actions');
-        if (actions) actions.innerHTML = '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;vertical-align:-1px;margin-right:3px"></i>Approved &amp; synced</span>';
-      }
-    } catch(e) {
-      alert('Could not approve. Please try again.');
-    }
-  }
-
-  // ── Load pending changes from Sheet ──
-  async function loadPending() {
-    const list = document.getElementById('pending-list');
-    if (!list) return;
-    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);"><span class="spinner spinner-dark"></span> Loading…</div>';
-    try {
-      const rows = await callAS('getPendingProfileChanges');
-      if (!rows || rows.error || rows.length === 0) {
-        list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:14px;"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>No pending changes — all caught up.</div>';
-        return;
-      }
-      list.innerHTML = rows.map(r =>
-        '<div class="sync-row pending" id="pr-' + r.participantId + '-' + r.section + '">' +
-        '<div><div class="sync-detail">' + (r.participantName||'') + ' — ' + (r.section||'') + '</div>' +
-        '<div class="sync-sub">Submitted ' + (r.submittedAt||'') + ' · ' + (r.fields||[]).map(f => f.field + ': ' + f.value).join(' · ') + '</div></div>' +
-        '<div class="sync-actions">' +
-        '<button class="btn btn-success btn-sm" onclick="approveChange('pr-' + r.participantId + '-' + r.section + '','' + r.participantId + '','' + r.section + '')"><i class="ti ti-check"></i> Approve</button>' +
-        '<button class="btn btn-danger btn-sm">Reject</button>' +
-        '</div></div>'
-      ).join('');
-      // Update badge
-      const cnt = document.getElementById('pending-count');
-      if (cnt) { cnt.textContent = rows.length; cnt.style.display = 'inline'; }
-    } catch(e) {
-      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Could not load pending changes.</div>';
-    }
-  }
-
-  // ── Init — load from Sheet on login ──
-  // Called by doLogin() after password is verified
-  function initAdminData() {
-    loadParticipants();
-    loadPending();
-  }
-</script>
 </body>
 </html>
