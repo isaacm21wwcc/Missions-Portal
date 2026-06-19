@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Find all zero-width spaces in JS/HTML files
+echo "=== Scanning for zero-width spaces ==="
+grep -rn $'\u200b' . --include="*.js" --include="*.html" --include="*.ts" --include="*.jsx"
+
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "=== Found! Removing all zero-width spaces ==="
+    find . \( -name "*.js" -o -name "*.html" -o -name "*.ts" -o -name "*.jsx" \) -exec sed -i "s/$(printf '\u200b')//g" {} +
+    echo "Done. Run 'git diff' to see changes."
+else
+    echo "No zero-width spaces found in local files."
+fi
