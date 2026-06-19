@@ -451,8 +451,29 @@
       if (parts.error) { console.error(parts.error); return; }
       allParticipants = parts;
       renderTable(parts);
+      updateFilterPills(parts);
     } catch(e) {
       console.error('Load error:', e);
+    }
+  }
+
+  // ── Update filter pills based on actual data ──
+  function updateFilterPills(participants) {
+    const total = participants.length;
+    const overdue = participants.filter(p => p.overdue).length;
+    const incomplete = participants.filter(p => !p.profileComplete).length;
+    const noDeposit = participants.filter(p => !p.depositPaid).length;
+    const fullyPaid = participants.filter(p => (p.paid || 0) >= (p.total || 0)).length;
+
+    const pillsContainer = document.getElementById('fpills');
+    if (pillsContainer) {
+      pillsContainer.innerHTML = `
+        <button class="fpill on" onclick="doFilter('all',this)">All (${total})</button>
+        <button class="fpill" onclick="doFilter('overdue',this)">Overdue (${overdue})</button>
+        <button class="fpill" onclick="doFilter('incomplete',this)">Profile incomplete (${incomplete})</button>
+        <button class="fpill" onclick="doFilter('no-deposit',this)">No deposit (${noDeposit})</button>
+        <button class="fpill" onclick="doFilter('paid',this)">Fully paid (${fullyPaid})</button>
+      `;
     }
   }
 
@@ -533,7 +554,7 @@
   }
 
   // ── Live participant data — loaded from Google Sheet only ──
-  let ALL_PARTICIPANTS = [];
+  let allParticipants = [];
   let CUR_FILTER = 'all';
 
   function fmt(n) { return '$' + Number(n || 0).toLocaleString(); }
@@ -552,7 +573,7 @@
   }
 
   // Stubs for functions called from HTML
-  async function initAdminData() { console.log('Admin data init'); }
+  async function initAdminData() { console.log('Admin data init'); loadParticipants(); }
   async function renderTable(parts) { console.log('Render table'); }
   function doFilter(filter, el) { console.log('Filter:', filter); }
   function doSearch(val) { console.log('Search:', val); }
@@ -611,10 +632,10 @@
     </div>
 
     <div class="metrics">
-      <div class="metric"><div class="metric-label">Participants</div><div class="metric-value">12</div></div>
-      <div class="metric"><div class="metric-label">Profiles complete</div><div class="metric-value mv-blue">8 / 12</div></div>
-      <div class="metric"><div class="metric-label">Deposits received</div><div class="metric-value mv-green">10 / 12</div></div>
-      <div class="metric"><div class="metric-label">Overdue accounts</div><div class="metric-value mv-red">2</div></div>
+      <div class="metric"><div class="metric-label">Participants</div><div class="metric-value" id="m-total">0</div></div>
+      <div class="metric"><div class="metric-label">Profiles complete</div><div class="metric-value mv-blue" id="m-complete">0 / 0</div></div>
+      <div class="metric"><div class="metric-label">Deposits received</div><div class="metric-value mv-green" id="m-deposits">0 / 0</div></div>
+      <div class="metric"><div class="metric-label">Overdue accounts</div><div class="metric-value mv-red" id="m-overdue">0</div></div>
     </div>
 
     <div class="tabs" id="adminTabs">
@@ -622,8 +643,8 @@
       <button class="tab" onclick="goTab('register')"><i class="ti ti-user-plus"></i> Register</button>
       <button class="tab" onclick="goTab('profile')"><i class="ti ti-id-badge"></i> Student profile</button>
       <button class="tab" onclick="goTab('schedule')"><i class="ti ti-calendar"></i> Payment schedule</button>
-      <button class="tab" onclick="goTab('pending')"><i class="ti ti-clock"></i> Pending changes <span class="bc">3</span></button>
-      <button class="tab" onclick="goTab('alerts')"><i class="ti ti-bell"></i> Alerts <span class="bc">2</span></button>
+      <button class="tab" onclick="goTab('pending')"><i class="ti ti-clock"></i> Pending changes <span class="bc" id="bc-pending">0</span></button>
+      <button class="tab" onclick="goTab('alerts')"><i class="ti ti-bell"></i> Alerts <span class="bc" id="bc-alerts">0</span></button>
     </div>
 
     <!-- ── PARTICIPANTS ── -->
@@ -631,11 +652,11 @@
       <div class="card">
         <div class="filter-row">
           <div class="filter-pills" id="fpills">
-            <button class="fpill on" onclick="doFilter('all',this)">All (12)</button>
-            <button class="fpill" onclick="doFilter('overdue',this)">Overdue (2)</button>
-            <button class="fpill" onclick="doFilter('incomplete',this)">Profile incomplete (4)</button>
-            <button class="fpill" onclick="doFilter('no-deposit',this)">No deposit (2)</button>
-            <button class="fpill" onclick="doFilter('paid',this)">Fully paid (3)</button>
+            <button class="fpill on" onclick="doFilter('all',this)">All (0)</button>
+            <button class="fpill" onclick="doFilter('overdue',this)">Overdue (0)</button>
+            <button class="fpill" onclick="doFilter('incomplete',this)">Profile incomplete (0)</button>
+            <button class="fpill" onclick="doFilter('no-deposit',this)">No deposit (0)</button>
+            <button class="fpill" onclick="doFilter('paid',this)">Fully paid (0)</button>
           </div>
           <div class="search-wrap">
             <i class="ti ti-search" style="font-size:14px;color:var(--gray-400)"></i>
@@ -704,7 +725,7 @@
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;align-items:center;gap:14px;">
-            <div class="av av-blue" style="width:52px;height:52px;font-size:16px;">JM</div>
+            <div class="av av-blue" style="width:52px;height:52px;font-size:16px;">—</div>
             <div>
               <div style="font-size:18px;font-weight:700;" id="sp-name">No participant selected</div>
               <div style="font-size:13px;color:var(--gray-500);margin-top:2px;" id="sp-meta">· —</div>
@@ -720,87 +741,12 @@
 
         <div class="alert alert-amber">
           <i class="ti ti-alert-triangle"></i>
-          <div>Passport details not yet confirmed. Medical info submitted — pending your review. <span style="text-decoration:underline;cursor:pointer;" onclick="goTab('pending')">Review now →</span></div>
+          <div>Select a participant to view their profile details.</div>
         </div>
 
-        <div class="profile-two">
-          <div>
-            <div class="pgroup">
-              <div class="pgroup-title">Personal details</div>
-              <div class="pgrid">
-                <div class="pitem"><label>Date of birth</label><span>12 Mar 2009 (age 17)</span></div>
-                <div class="pitem"><label>Gender</label><span id="sp-gender">—</span></div>
-                <div class="pitem"><label>Mobile</label><span id="sp-mobile">—</span></div>
-                <div class="pitem"><label>Email</label><span id="sp-email">—</span></div>
-                <div class="pitem full"><label>Address</label><span id="sp-address">—</span></div>
-              </div>
-            </div>
-            <div class="pgroup">
-              <div class="pgroup-title">Parent / guardian</div>
-              <div class="pgrid">
-                <div class="pitem"><label>Name</label><span id="sp-parent-name">—</span></div>
-                <div class="pitem"><label>Relationship</label><span id="sp-parent-rel">—</span></div>
-                <div class="pitem"><label>Mobile</label><span id="sp-parent-ph">—</span></div>
-                <div class="pitem"><label>Email</label><span id="sp-parent-email">—</span></div>
-              </div>
-            </div>
-            <div class="pgroup">
-              <div class="pgroup-title">Emergency contact</div>
-              <div class="pgrid">
-                <div class="pitem"><label>Name</label><span id="sp-em-name">—</span></div>
-                <div class="pitem"><label>Relationship</label><span id="sp-em-rel">—</span></div>
-                <div class="pitem"><label>Mobile</label><span id="sp-em-ph">—</span></div>
-                <div class="pitem"><label>Email</label><span id="sp-em-email">—</span></div>
-              </div>
-            </div>
-            <div class="pgroup">
-              <div class="pgroup-title">Church &amp; group</div>
-              <div class="pgrid">
-                <div class="pitem"><label>Church</label><span id="sp-church">—</span></div>
-                <div class="pitem"><label>Small group</label><span id="sp-group">—</span></div>
-                <div class="pitem"><label>Years attending</label><span id="sp-years">—</span></div>
-                <div class="pitem"><label>Baptised</label><span id="sp-epi">—</span></div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div class="pgroup">
-              <div class="pgroup-title">Medical &amp; dietary <span class="badge b-amber" style="margin-left:6px;">Pending review</span></div>
-              <div class="pgrid">
-                <div class="pitem"><label>Allergies</label><span id="sp-allergy">—</span></div>
-                <div class="pitem"><label>Dietary</label><span id="sp-diet">—</span></div>
-                <div class="pitem"><label>Medicare no.</label><span id="sp-medicare">—</span></div>
-                <div class="pitem"><label>Blood type</label><span id="sp-blood">—</span></div>
-                <div class="pitem"><label>EpiPen</label><span id="sp-epi">—</span></div>
-                <div class="pitem"><label>Inhaler</label><span id="sp-inhaler">—</span></div>
-              </div>
-            </div>
-            <div class="pgroup">
-              <div class="pgroup-title">Passport &amp; travel</div>
-              <div class="pgrid">
-                <div class="pitem"><label>Passport no.</label><span class="p-missing">Pending — not yet entered</span></div>
-                <div class="pitem"><label>Expiry</label><span class="p-missing">Pending</span></div>
-                <div class="pitem"><label>Nationality</label><span id="sp-nat">—</span></div>
-                <div class="pitem"><label>Visa required</label><span id="sp-visa">—</span></div>
-              </div>
-            </div>
-            <div class="pgroup">
-              <div class="pgroup-title">Participant journey</div>
-              <div class="journey">
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Profile created</div><div class="j-sub">19 Feb 2026</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Invite sent &amp; account activated</div><div class="j-sub">20 Feb 2026</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Payment schedule set</div><div class="j-sub">20 Feb 2026</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Deposit paid</div><div class="j-sub">22 Feb 2026</div></div></div>
-                <div class="j-step"><div class="j-dot now" style="font-size:8px">···</div><div class="j-line"></div><div><div class="j-title">Ongoing payments</div><div class="j-sub">—</div></div></div>
-                <div class="j-step"><div class="j-dot future">6</div><div class="j-line"></div><div><div class="j-title">Fully paid</div><div class="j-sub">Due by 1 Jul 2027</div></div></div>
-              </div>
-            </div>
-            <div class="pgroup">
-              <div class="pgroup-title">Admin notes</div>
-              <textarea style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);min-height:80px;outline:none;resize:vertical;"></textarea>
-              <button class="btn btn-sm" style="margin-top:8px;"><i class="ti ti-device-floppy"></i> Save note</button>
-            </div>
-          </div>
+        <div style="text-align:center;padding:2rem;color:var(--gray-400);">
+          <i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>
+          No participant selected
         </div>
       </div>
     </div>
@@ -813,89 +759,15 @@
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:13px;color:var(--gray-500);">Participant:</span>
             <select style="font-size:13px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);outline:none;">
-<option value="">Select participant…</option>
+              <option value="">Select participant…</option>
             </select>
           </div>
         </div>
 
-        <div class="alert alert-green" style="margin-bottom:1.25rem;">
-          <i class="ti ti-info-circle"></i>
-          <div>The <strong>deposit ($500)</strong> is fixed and required before the student can access their portal. All other milestones are editable. Students may pay in any instalment amounts.</div>
+        <div style="text-align:center;padding:2rem;color:var(--gray-400);">
+          <i class="ti ti-calendar" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>
+          Select a participant to view or edit their payment schedule.
         </div>
-
-        <table class="sched-table">
-          <thead>
-            <tr><th>Milestone</th><th>Due date</th><th>Target ($)</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Deposit</strong> <span class="badge b-purple" style="margin-left:4px;">Required</span></td>
-              <td><input type="date" value="2025-03-01" disabled></td>
-              <td><input type="text" value="500" disabled></td>
-              <td><span class="badge b-green">Paid</span></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>Payment 1</td>
-              <td><input type="date" value="2025-06-01"></td>
-              <td><input type="number" value="500" min="0"></td>
-              <td><span class="badge b-green">Paid</span></td>
-              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
-            </tr>
-            <tr>
-              <td>Payment 2</td>
-              <td><input type="date" value="2026-03-01"></td>
-              <td><input type="number" value="500" min="0"></td>
-              <td><span class="badge b-blue">Due soon</span></td>
-              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
-            </tr>
-            <tr>
-              <td>Payment 3</td>
-              <td><input type="date" value="2026-06-01"></td>
-              <td><input type="number" value="500" min="0"></td>
-              <td><span class="badge b-gray">Upcoming</span></td>
-              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
-            </tr>
-            <tr>
-              <td>Payment 4</td>
-              <td><input type="date" value="2026-09-01"></td>
-              <td><input type="number" value="500" min="0"></td>
-              <td><span class="badge b-gray">Upcoming</span></td>
-              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
-            </tr>
-            <tr>
-              <td>Payment 5</td>
-              <td><input type="date" value="2026-12-01"></td>
-              <td><input type="number" value="500" min="0"></td>
-              <td><span class="badge b-gray">Upcoming</span></td>
-              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
-            </tr>
-            <tr class="final-row">
-              <td><strong>Final cutoff</strong> <span class="badge b-red" style="margin-left:4px;">Deadline</span></td>
-              <td><input type="date" value="2027-07-01"></td>
-              <td><input type="text" value="Balance" disabled></td>
-              <td><span class="badge b-gray">Upcoming</span></td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="display:flex;align-items:center;gap:8px;margin-top:1.25rem;flex-wrap:wrap;">
-          <button class="btn btn-success"><i class="ti ti-check"></i> Save schedule</button>
-          <button class="btn"><i class="ti ti-plus"></i> Add milestone</button>
-          <span style="font-size:13px;color:var(--gray-500);margin-left:auto;">Total scheduled: <strong style="color:var(--gray-900);">$3,000 + balance = $3,450</strong></span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title" style="margin-bottom:1rem;">Payment history</div>
-        <table class="pay-history-table">
-          <colgroup><col style="width:36%"><col style="width:20%"><col style="width:26%"><col style="width:18%"></colgroup>
-          <thead><tr><th>Description</th><th>Date</th><th>Reference</th><th style="text-align:right">Amount</th></tr></thead>
-          <tbody>
-<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--gray-400);">Select a participant to view their payment history.</td></tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
@@ -907,54 +779,10 @@
       </div>
 
       <div class="card">
-        <div class="card-title" style="margin-bottom:1rem;">Pending review (2)</div>
-        <div class="sync-row pending" id="pr-1">
-          <div>
-            <div class="sync-detail">Pending review</div>
-            <div class="sync-sub">Details from student submission will appear here</div>
-          </div>
-          <div class="sync-actions">
-            <button class="btn btn-sm" onclick="goTab('profile')"><i class="ti ti-eye"></i> View profile</button>
-            <button class="btn btn-success btn-sm" onclick="approveChange('pr-1','','Medical')"><i class="ti ti-check"></i> Approve</button>
-            <button class="btn btn-danger btn-sm">Reject</button>
-          </div>
-        </div>
-        <div class="sync-row pending" id="pr-2">
-          <div>
-            <div class="sync-detail">Pending review</div>
-            <div class="sync-sub">Details from student submission will appear here</div>
-          </div>
-          <div class="sync-actions">
-            <button class="btn btn-sm"><i class="ti ti-eye"></i> View profile</button>
-            <button class="btn btn-success btn-sm" onclick="approveChange('pr-2','','Passport')"><i class="ti ti-check"></i> Approve</button>
-            <button class="btn btn-danger btn-sm">Reject</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title" style="margin-bottom:1rem;">Edit requests (1)</div>
-        <div class="sync-row pending" id="pr-3">
-          <div>
-            <div class="sync-detail">Edit request</div>
-            <div class="sync-sub">Reason: "Reason will appear here" · Submitted 15 May 2026</div>
-          </div>
-          <div class="sync-actions">
-            <button class="btn btn-primary btn-sm" onclick="approveChange('pr-3','Sam O\'Brien','Emergency contact unlocked')">Unlock for edit</button>
-            <button class="btn btn-danger btn-sm">Decline</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title" style="margin-bottom:1rem;">Recently approved</div>
-        <div class="sync-row approved">
-          <div><div class="sync-detail">—</div><div class="sync-sub">Approved sections appear here</div></div>
-          <span class="badge b-green">Approved</span>
-        </div>
-        <div class="sync-row approved">
-          <div><div class="sync-detail">—</div><div class="sync-sub">Approved sections appear here</div></div>
-          <span class="badge b-green">Approved</span>
+        <div class="card-title" style="margin-bottom:1rem;">Pending review</div>
+        <div style="text-align:center;padding:1.5rem;color:var(--gray-400);font-size:14px;">
+          <i class="ti ti-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
+          No pending submissions yet.
         </div>
       </div>
     </div>
@@ -963,43 +791,9 @@
     <div class="panel" id="t-alerts">
       <div class="card">
         <div class="card-title" style="margin-bottom:1rem;">Accounts needing attention</div>
-        <div class="alert-row danger">
-          <div>
-            <div class="ar-title" style="color:var(--red)">— Overdue payment</div>
-            <div class="ar-sub" style="color:var(--red)">Overdue accounts will appear here once participants are registered</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-sm" onclick="goTab('profile')"><i class="ti ti-eye"></i> View</button>
-            <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Send reminder</button>
-          </div>
-        </div>
-        <div class="alert-row danger" style="margin-bottom:1.25rem;">
-          <div>
-            <div class="ar-title" style="color:var(--red)">— No deposit received</div>
-            <div class="ar-sub" style="color:var(--red)">Missing deposit details will appear here</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-sm"><i class="ti ti-eye"></i> View</button>
-            <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Send reminder</button>
-          </div>
-        </div>
-
-        <div class="card-title" style="margin-bottom:1rem;">Upcoming — due in 12 days (1 Mar 2026)</div>
-        <div class="alert-row warn">
-          <div>
-            <div class="ar-title" style="color:var(--amber)">5 participants — Payment 2 due 1 Mar 2026</div>
-            <div class="ar-sub" style="color:var(--amber)">Participants with upcoming payments will be listed here</div>
-          </div>
-          <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Remind all</button>
-        </div>
-
-        <div class="card-title" style="margin-bottom:1rem;margin-top:1.25rem;">Profile completion issues</div>
-        <div class="alert-row warn">
-          <div>
-            <div class="ar-title" style="color:var(--amber)">4 participants — Profile incomplete</div>
-            <div class="ar-sub" style="color:var(--amber)">Participants with incomplete profiles will be listed here</div>
-          </div>
-          <button class="btn btn-sm"><i class="ti ti-mail"></i> Send nudge</button>
+        <div style="text-align:center;padding:1.5rem;color:var(--gray-400);font-size:14px;">
+          <i class="ti ti-bell" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
+          No alerts at this time.
         </div>
       </div>
     </div>
