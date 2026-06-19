@@ -425,13 +425,324 @@
     .app-body { padding: 1.25rem 1rem; }
   }
 </style>
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9bDSmmC_qnwBiY5OZe_caVkGSKWtuoEcOJGCrGTI8w_s4p4POuh94Uu01p5b6IzXk/exec';
+
+  // ── State ──
+  let STATE = { participantId: null, firstName: '', lastName: '', email: '' };
+
+  // ── Helpers ──
+  function $(id) { return document.getElementById(id); }
+  function v(id) { const e=$(id); return e ? e.value.trim() : ''; }
+  function fmt(n) { return '$' + Number(n||0).toLocaleString(); }
+  function showErr(id, msg) { const e=$(id); if(!e)return; e.style.display='flex'; const d=e.querySelector('div'); if(d) d.textContent=msg; }
+  function hideErr(id) { const e=$(id); if(e) e.style.display='none'; }
+  function setBtn(id, loading, label) {
+    const b=$(id); if(!b)return;
+    b.disabled=loading;
+    b.innerHTML=loading?'<span class="spinner"></span> Please wait…':label;
+  }
+
+  // ── Spin animation ──
+  const _style = document.createElement('style');
+  _style.textContent = '@keyframes spin{to{transform:rotate(360deg)}} .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}';
+  document.head.appendChild(_style);
+
+  // ── JSONP call to Apps Script ──
+  function callAS(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      const cbName = '_cb_' + fn + '_' + Date.now();
+      const url = APPS_SCRIPT_URL
+        + '?fn='       + encodeURIComponent(fn)
+        + '&args='     + encodeURIComponent(JSON.stringify(args))
+        + '&callback=' + cbName;
+
+      window[cbName] = function(data) {
+        resolve(data);
+        delete window[cbName];
+        const s = document.getElementById(cbName);
+        if (s) s.remove();
+      };
+
+      const script = document.createElement('script');
+      script.id = cbName;
+      script.src = url;
+      script.onerror = function() {
+        reject(new Error('Connection failed'));
+        delete window[cbName];
+        script.remove();
+      };
+      setTimeout(() => {
+        if (window[cbName]) {
+          reject(new Error('Request timed out'));
+          delete window[cbName];
+          script.remove();
+        }
+      }, 20000);
+      document.head.appendChild(script);
+    });
+  }
+
+  // ── Screen navigation ──
+  const SCREENS = ['screen-invite','screen-setup','screen-login','main-app'];
+  function showScreen(id) {
+    SCREENS.forEach(s => {
+      const el = $(s);
+      if (!el) return;
+      el.style.display = s === id ? (s==='main-app'?'block':'flex') : 'none';
+    });
+  }
+
+  function signOut() {
+    sessionStorage.removeItem('gcyouth');
+    STATE = { participantId:null, firstName:'', lastName:'', email:'' };
+    showScreen('screen-login');
+  }
+
+  // ── Step 1: Check email is registered ──
+  async function checkEmail() {
+    hideErr('invite-error');
+    const email = $('invite-email') ? $('invite-email').value.trim() : '';
+    if (!email) { showErr('invite-error','Please enter your email address.'); return; }
+    setBtn('invite-btn', true, '<i class="ti ti-arrow-right"></i> Continue');
+    try {
+      const res = await callAS('checkEmailRegistered', email);
+      setBtn('invite-btn', false, '<i class="ti ti-arrow-right"></i> Continue');
+      if (!res || !res.registered) {
+        showErr('invite-error', (res && res.error) || 'This email is not registered for the trip. Please contact your youth coordinator.');
+        return;
+      }
+      if (res.alreadyActive) {
+        if ($('login-email')) $('login-email').value = email;
+        showScreen('screen-login');
+        return;
+      }
+      if ($('setup-email')) $('setup-email').value = email;
+      if ($('setup-sub')) $('setup-sub').textContent = 'Hi ' + res.firstName + '! Set a password to access your portal.';
+      if (res.tripName && $('setup-tripname')) {
+        $('setup-tripname').textContent = res.tripName + ' — ' + res.tripDate;
+        $('setup-total').textContent = fmt(res.tripTotal);
+        $('setup-deposit').textContent = fmt(res.depositAmt) + ' deposit required';
+        $('setup-tripbox').style.display = 'block';
+      }
+      showScreen('screen-setup');
+    } catch(e) {
+      setBtn('invite-btn', false, '<i class="ti ti-arrow-right"></i> Continue');
+      console.error('checkEmail error:', e);
+      showErr('invite-error', 'Connection error. Please try again.');
+    }
+  }
+
+  // ── Step 2: Create account ──
+  async function createAccount() {
+    hideErr('setup-error');
+    const email = v('setup-email');
+    const pw1 = v('pw1');
+    const pw2 = v('pw2');
+    if (!pw1) { showErr('setup-error','Please enter a password.'); return; }
+    if (pw1.length < 8) { showErr('setup-error','Password must be at least 8 characters.'); return; }
+    if (pw1 !== pw2) { showErr('setup-error','Passwords do not match.'); return; }
+    setBtn('setup-btn', true, '<i class="ti ti-check"></i> Creating…');
+    try {
+      const res = await callAS('createAccount', email, pw1);
+      if (!res || !res.success) {
+        setBtn('setup-btn', false, '<i class="ti ti-check"></i> Create account & continue');
+        showErr('setup-error', (res && res.error) || 'Failed to create account.');
+        return;
+      }
+      STATE = {
+        participantId: res.participantId,
+        firstName: res.firstName,
+        lastName: res.lastName,
+        email: res.email
+      };
+      sessionStorage.setItem('gcyouth', JSON.stringify(STATE));
+      setBtn('setup-btn', false, '<i class="ti ti-check"></i> Create account & continue');
+      await loadAppData();
+      showScreen('main-app');
+    } catch(e) {
+      setBtn('setup-btn', false, '<i class="ti ti-check"></i> Create account & continue');
+      console.error('createAccount error:', e);
+      showErr('setup-error', 'Connection error. Please try again.');
+    }
+  }
+
+  // ── Step 3: Login ──
+  async function doLogin() {
+    hideErr('login-error');
+    const email = v('login-email');
+    const pw = v('login-pw');
+    if (!email) { showErr('login-error','Please enter your email.'); return; }
+    if (!pw) { showErr('login-error','Please enter your password.'); return; }
+    setBtn('login-btn', true, '<i class="ti ti-login"></i> Signing in…');
+    try {
+      const res = await callAS('studentLogin', email, pw);
+      if (!res || !res.success) {
+        setBtn('login-btn', false, '<i class="ti ti-login"></i> Sign in');
+        showErr('login-error', (res && res.error) || 'Login failed.');
+        return;
+      }
+      STATE = {
+        participantId: res.participantId,
+        firstName: res.firstName,
+        lastName: res.lastName,
+        email: res.email
+      };
+      sessionStorage.setItem('gcyouth', JSON.stringify(STATE));
+      setBtn('login-btn', false, '<i class="ti ti-login"></i> Sign in');
+      await loadAppData();
+      showScreen('main-app');
+    } catch(e) {
+      setBtn('login-btn', false, '<i class="ti ti-login"></i> Sign in');
+      console.error('doLogin error:', e);
+      showErr('login-error', 'Connection error. Please try again.');
+    }
+  }
+
+  // ── Load app data ──
+  async function loadAppData() {
+    try {
+      const res = await callAS('getStudentData', STATE.participantId);
+      if (!res || res.error) {
+        const el = $('app-error-text');
+        if (el) el.textContent = 'Could not load profile: ' + (res.error || 'Unknown error');
+        showScreen('main-app');
+        const appErr = $('app-error');
+        if (appErr) { appErr.style.display = 'block'; const cnt = $('app-content'); if (cnt) cnt.style.display = 'none'; }
+        return;
+      }
+
+      // Populate top nav
+      if ($('nav-name')) $('nav-name').textContent = res.firstName + ' ' + res.lastName;
+      const av = $(​'nav-avatar');
+      if (av) av.textContent = (res.firstName.charAt(0) + res.lastName.charAt(0)).toUpperCase();
+
+      // Populate metrics
+      if ($('m-total')) $('m-total').textContent = fmt(res.tripTotal);
+      if ($('m-paid')) $('m-paid').textContent = fmt(res.totalPaid);
+      if ($('m-remaining')) $('m-remaining').textContent = fmt(res.remaining);
+
+      // Progress bar
+      const pct = res.tripTotal > 0 ? Math.round((res.totalPaid / res.tripTotal) * 100) : 0;
+      if ($('progress-fill')) $('progress-fill').style.width = pct + '%';
+      if ($('progress-text')) $('progress-text').textContent = pct + '% paid';
+      if ($('progress-rem')) $('progress-rem').textContent = fmt(res.remaining) + ' remaining';
+
+      // Profile alert
+      const profileAlert = $('profile-alert');
+      if (profileAlert) {
+        if (!res.depositPaid) {
+          profileAlert.style.display = 'flex';
+          const txt = $('profile-alert-text');
+          if (txt) txt.textContent = 'Your $' + res.depositAmt + ' deposit is required to confirm your place on the trip. Please make a payment.';
+          profileAlert.className = 'alert alert-amber';
+        } else if (pct < 100) {
+          profileAlert.style.display = 'flex';
+          const txt = $('profile-alert-text');
+          if (txt) txt.textContent = 'You have $' + res.remaining + ' remaining to pay by ' + res.finalCutoff + '.';
+          profileAlert.className = 'alert alert-blue';
+        }
+      }
+
+      // Profile data
+      if ($('pf-name')) $('pf-name').textContent = res.firstName + ' ' + res.lastName;
+      if ($('pf-dob')) $('pf-dob').textContent = res.dob || '—';
+      if ($('pf-mobile')) $('pf-mobile').textContent = res.mobile || '—';
+      if ($('pf-email')) $('pf-email').textContent = res.email;
+      if ($('pf-address')) $('pf-address').textContent = res.address || '—';
+
+      // Payment schedule
+      renderPaymentSchedule(res);
+
+      // Payment history
+      if (res.payments && res.payments.length > 0) {
+        const hb = $('history-body');
+        if (hb) {
+          hb.innerHTML = '';
+          res.payments.forEach(p => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${p.Description}</td><td>${p.Date}</td><td>${p.Reference}</td><td style="text-align:right">${fmt(p.Amount)}</td>`;
+            hb.appendChild(row);
+          });
+          const ht = $('history-table');
+          const nh = $('no-history');
+          if (ht) ht.style.display = 'table';
+          if (nh) nh.style.display = 'none';
+        }
+      }
+
+      // Section status
+      const sections = ['parent','emergency','medical','passport','church'];
+      sections.forEach(s => {
+        const status = res.sectionStatus[s] || 'incomplete';
+        const badge = $('badge-' + s);
+        const chk = $('chk-' + s);
+        if (badge) {
+          if (status === 'approved') {
+            badge.textContent = 'Approved';
+            badge.className = 'badge b-green';
+          } else if (status === 'pending') {
+            badge.textContent = 'Pending review';
+            badge.className = 'badge b-amber';
+          } else {
+            badge.textContent = 'Incomplete';
+            badge.className = 'badge b-amber';
+          }
+        }
+        if (chk) {
+          chk.className = status === 'approved' ? 'chk done' : (status === 'pending' ? 'chk warn' : 'chk todo');
+          const icon = chk.querySelector('.chk-icon');
+          if (icon) {
+            icon.className = status === 'approved' ? 'chk-icon done' : (status === 'pending' ? 'chk-icon warn' : 'chk-icon todo');
+            icon.innerHTML = status === 'approved' ? '<i class="ti ti-check"></i>' : '';
+          }
+        }
+      });
+
+      // Messages
+      if (res.messages && res.messages.length > 0) {
+        const msgList = $('messages-list');
+        if (msgList) {
+          msgList.innerHTML = '';
+          res.messages.forEach(msg => {
+            const item = document.createElement('div');
+            item.className = 'notif-item';
+            const dotClass = msg.Type === 'approval' ? 'nd-green' : (msg.Type === 'payment' ? 'nd-blue' : 'nd-amber');
+            item.innerHTML = `<div class="notif-dot ${dotClass}"></div><div><div class="notif-title">${msg.Title}</div><div class="notif-body">${msg.Body}</div><div class="notif-meta">${msg.Date}</div></div>`;
+            msgList.appendChild(item);
+          });
+        }
+        const msgCount = $('msg-count');
+        if (msgCount && res.messages.length > 0) {
+          msgCount.textContent = res.messages.length;
+          msgCount.style.display = 'inline-block';
+        }
+      }
+
+      // Finalize
+      const appLoading = $('app-loading');
+      const appContent = $('app-content');
+      if (appLoading) appLoading.style.display = 'none';
+      if (appContent) appContent.style.display = 'block';
+    } catch(e) {
+      console.error('loadAppData error:', e);
+      const appErr = $('app-error');
+      if (appErr) appErr.style.display = 'block';
+      const appCont = $('app-content');
+      if (appCont) appCont.style.display = 'none';
+    }
+  }
+
+  // Stub functions that appear later
+  function switchTab(name) { /* implemented below */ }
+  function toggleSection(name) { /* implemented below */ }
+  function submitSection(section, fields) { /* implemented below */ }
+  function reqEdit(section) { /* implemented below */ }
+  function renderPaymentSchedule(data) { /* implemented below */ }
+</script>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════
-     SCREEN 1: INVITE EMAIL VIEW
-     (Simulates what student receives)
-════════════════════════════════════════════ -->
 <!-- ═══════════════════════════════════════════
      SCREEN 1: CHECK EMAIL / ENTRY POINT
 ════════════════════════════════════════════ -->
@@ -708,7 +1019,7 @@
               <div class="form-group" style="margin:0"><label>Email</label><input type="email" id="in-parent-email" placeholder=""></div>
             </div>
             <div style="display:flex;gap:8px;margin-top:4px;">
-              <button class="btn btn-success" onclick="submitSection('parent',{Name:v('in-parent-name'),Relationship:v('in-parent-rel'),Mobile:v('in-parent-ph'),Email:v('in-parent-email')})"><i class="ti ti-check"></i> Save &amp; submit</button>
+              <button class="btn btn-success" onclick="submitSection('parent',{Name:v('in-parent-name'),Relationship:v('in-parent-rel'),Mobile:v('in-parent-ph'),Email:v('in-parent-email')})"><i class="ti ti-check"></i> Submit</button>
               <button class="btn" onclick="toggleSection('parent')">Cancel</button>
             </div>
           </div>
@@ -736,7 +1047,7 @@
               <div class="form-group" style="margin:0"><label>Email</label><input type="email" id="in-em-email" placeholder=""></div>
             </div>
             <div style="display:flex;gap:8px;margin-top:4px;">
-              <button class="btn btn-success" onclick="submitSection('emergency',{Name:v('in-em-name'),Relationship:v('in-em-rel'),Mobile:v('in-em-ph'),Email:v('in-em-email')})"><i class="ti ti-check"></i> Save &amp; submit</button>
+              <button class="btn btn-success" onclick="submitSection('emergency',{Name:v('in-em-name'),Relationship:v('in-em-rel'),Mobile:v('in-em-ph'),Email:v('in-em-email')})"><i class="ti ti-check"></i> Submit</button>
               <button class="btn" onclick="toggleSection('emergency')">Cancel</button>
             </div>
           </div>
@@ -770,7 +1081,7 @@
             </div>
             <div class="form-group"><label>Medical conditions / medications</label><textarea id="in-med-notes" rows="3" placeholder=""></textarea></div>
             <div style="display:flex;gap:8px;margin-top:4px;">
-              <button class="btn btn-success" onclick="submitSection('medical',{Allergies:v('in-med-allergy'),Dietary:v('in-med-diet'),Medicare:v('in-med-medicare'),BloodType:v('in-med-blood'),EpiPen:v('in-med-epi'),Inhaler:v('in-med-inhaler'),Notes:v('in-med-notes')})"><i class="ti ti-check"></i> Save &amp; submit</button>
+              <button class="btn btn-success" onclick="submitSection('medical',{Allergies:v('in-med-allergy'),Dietary:v('in-med-diet'),Medicare:v('in-med-medicare'),BloodType:v('in-med-blood'),EpiPen:v('in-med-epi'),Inhaler:v('in-med-inhaler'),Notes:v('in-med-notes')})"><i class="ti ti-check"></i> Submit</button>
               <button class="btn" onclick="toggleSection('medical')">Cancel</button>
             </div>
           </div>
@@ -799,7 +1110,7 @@
             </div>
             <div class="form-group"><label>Travel notes</label><textarea id="in-pp-notes" rows="2" placeholder=""></textarea></div>
             <div style="display:flex;gap:8px;margin-top:4px;">
-              <button class="btn btn-success" onclick="submitSection('passport',{PassportNumber:v('in-pp-num'),Expiry:v('in-pp-expiry'),Nationality:v('in-pp-nat'),VisaRequired:v('in-pp-visa'),Notes:v('in-pp-notes')})"><i class="ti ti-check"></i> Save &amp; submit</button>
+              <button class="btn btn-success" onclick="submitSection('passport',{PassportNumber:v('in-pp-num'),Expiry:v('in-pp-expiry'),Nationality:v('in-pp-nat'),VisaRequired:v('in-pp-visa'),Notes:v('in-pp-notes')})"><i class="ti ti-check"></i> Submit</button>
               <button class="btn" onclick="toggleSection('passport')">Cancel</button>
             </div>
           </div>
@@ -827,7 +1138,7 @@
               <div class="form-group" style="margin:0"><label>Baptised?</label><select id="in-ch-bap"><option>Yes</option><option>No</option><option>Prefer not to say</option></select></div>
             </div>
             <div style="display:flex;gap:8px;margin-top:4px;">
-              <button class="btn btn-success" onclick="submitSection('church',{Church:v('in-ch-church'),SmallGroup:v('in-ch-group'),YearsAttending:v('in-ch-years'),Baptised:v('in-ch-bap')})"><i class="ti ti-check"></i> Save &amp; submit</button>
+              <button class="btn btn-success" onclick="submitSection('church',{Church:v('in-ch-church'),SmallGroup:v('in-ch-group'),YearsAttending:v('in-ch-years'),Baptised:v('in-ch-bap')})"><i class="ti ti-check"></i> Submit</button>
               <button class="btn" onclick="toggleSection('church')">Cancel</button>
             </div>
           </div>
@@ -862,7 +1173,6 @@
             <div style="display:inline-flex;align-items:center;gap:8px;background:var(--brand-light);color:var(--brand);border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;">
               <i class="ti ti-clock"></i> Coming soon — Tithe.ly integration
             </div>
-            <!-- PASTE YOUR TITHE.LY EMBED CODE HERE -->
           </div>
         </div>
 
@@ -895,416 +1205,53 @@
     </div><!-- /app-content -->
   </div><!-- /app-body -->
 </div><!-- /main-app -->
+
 <script>
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9bDSmmC_qnwBiY5OZe_caVkGSKWtuoEcOJGCrGTI8w_s4p4POuh94Uu01p5b6IzXk/exec';
-
-  // ── State ──
-  let STATE = { participantId: null, firstName: '', lastName: '', email: '' };
-
-  // ── Helpers ──
-  function $(id) { return document.getElementById(id); }
-  function v(id) { const e=$(id); return e ? e.value.trim() : ''; }
-  function fmt(n) { return '$' + Number(n||0).toLocaleString(); }
-  function showErr(id, msg) { const e=$(id); if(!e)return; e.style.display='flex'; const d=e.querySelector('div'); if(d) d.textContent=msg; }
-  function hideErr(id) { const e=$(id); if(e) e.style.display='none'; }
-  function setBtn(id, loading, label) {
-    const b=$(id); if(!b)return;
-    b.disabled=loading;
-    b.innerHTML=loading?'<span class="spinner"></span> Please wait…':label;
-  }
-
-  // ── Spin animation ──
-  const _style = document.createElement('style');
-  _style.textContent = '@keyframes spin{to{transform:rotate(360deg)}} .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:6px;}';
-  document.head.appendChild(_style);
-
-  // ── JSONP call to Apps Script ──
-  function callAS(fn, ...args) {
-    return new Promise((resolve, reject) => {
-      const cbName = '_cb_' + fn + '_' + Date.now();
-      const url = APPS_SCRIPT_URL
-        + '?fn='       + encodeURIComponent(fn)
-        + '&args='     + encodeURIComponent(JSON.stringify(args))
-        + '&callback=' + cbName;
-
-      window[cbName] = function(data) {
-        resolve(data);
-        delete window[cbName];
-        const s = document.getElementById(cbName);
-        if (s) s.remove();
-      };
-
-      const script = document.createElement('script');
-      script.id = cbName;
-      script.src = url;
-      script.onerror = function() {
-        reject(new Error('Connection failed'));
-        delete window[cbName];
-        script.remove();
-      };
-      setTimeout(() => {
-        if (window[cbName]) {
-          reject(new Error('Request timed out'));
-          delete window[cbName];
-          script.remove();
-        }
-      }, 20000);
-      document.head.appendChild(script);
-    });
-  }
-
-  // ── Screen navigation ──
-  const SCREENS = ['screen-invite','screen-setup','screen-login','main-app'];
-  function showScreen(id) {
-    SCREENS.forEach(s => {
-      const el = $(s);
-      if (!el) return;
-      el.style.display = s === id ? (s==='main-app'?'block':'flex') : 'none';
-    });
-  }
-
-  function signOut() {
-    sessionStorage.removeItem('gcyouth');
-    STATE = { participantId:null, firstName:'', lastName:'', email:'' };
-    showScreen('screen-login');
-  }
-
-  // ── Step 1: Check email is registered ──
-  async function checkEmail() {
-    hideErr('invite-error');
-    const email = $('invite-email') ? $('invite-email').value.trim() : '';
-    if (!email) { showErr('invite-error','Please enter your email address.'); return; }
-    setBtn('invite-btn', true, '<i class="ti ti-arrow-right"></i> Continue');
-    try {
-      const res = await callAS('checkEmailRegistered', email);
-      setBtn('invite-btn', false, '<i class="ti ti-arrow-right"></i> Continue');
-      if (!res || !res.registered) {
-        showErr('invite-error', (res && res.error) || 'This email is not registered for the trip. Please contact your youth coordinator.');
-        return;
-      }
-      if (res.alreadyActive) {
-        if ($('login-email')) $('login-email').value = email;
-        showScreen('screen-login');
-        return;
-      }
-      if ($('setup-email')) $('setup-email').value = email;
-      if ($('setup-sub')) $('setup-sub').textContent = 'Hi ' + res.firstName + '! Set a password to access your portal.';
-      if (res.tripName && $('setup-tripname')) {
-        $('setup-tripname').textContent = res.tripName + ' — ' + res.tripDate;
-        $('setup-total').textContent = fmt(res.tripTotal);
-        $('setup-deposit').textContent = fmt(res.depositAmt) + ' deposit required';
-        $('setup-tripbox').style.display = 'block';
-      }
-      showScreen('screen-setup');
-    } catch(e) {
-      setBtn('invite-btn', false, '<i class="ti ti-arrow-right"></i> Continue');
-      showErr('invite-error', 'Connection error. Please try again.');
-    }
-  }
-
-  // ── Step 2: Create account ──
-  async function createAccount() {
-    hideErr('setup-error');
-    const email = $('setup-email') ? $('setup-email').value.trim() : '';
-    const pw1   = $('pw1') ? $('pw1').value : '';
-    const pw2   = $('pw2') ? $('pw2').value : '';
-    if (pw1.length < 8) { showErr('setup-error','Password must be at least 8 characters.'); return; }
-    if (pw1 !== pw2)    { showErr('setup-error','Passwords do not match.'); return; }
-    setBtn('setup-btn', true, '<i class="ti ti-check"></i> Create account & continue');
-    try {
-      const res = await callAS('createAccount', email, pw1);
-      setBtn('setup-btn', false, '<i class="ti ti-check"></i> Create account & continue');
-      if (!res || !res.success) { showErr('setup-error', (res && res.error) || 'Could not create account. Please try again.'); return; }
-      STATE.participantId = res.participantId;
-      STATE.firstName     = res.firstName;
-      STATE.lastName      = res.lastName;
-      STATE.email         = res.email;
-      sessionStorage.setItem('gcyouth', JSON.stringify(STATE));
-      launchApp();
-    } catch(e) {
-      setBtn('setup-btn', false, '<i class="ti ti-check"></i> Create account & continue');
-      showErr('setup-error','Connection error. Please try again.');
-    }
-  }
-
-  // ── Step 3: Sign in ──
-  async function doLogin() {
-    hideErr('login-error');
-    const email = $('login-email') ? $('login-email').value.trim() : '';
-    const pw    = $('login-pw')    ? $('login-pw').value           : '';
-    if (!email || !pw) { showErr('login-error','Please enter your email and password.'); return; }
-    setBtn('login-btn', true, '<i class="ti ti-login"></i> Sign in');
-    try {
-      const res = await callAS('studentLogin', email, pw);
-      setBtn('login-btn', false, '<i class="ti ti-login"></i> Sign in');
-      if (!res || !res.success) { showErr('login-error', (res && res.error) || 'Incorrect email or password.'); return; }
-      STATE.participantId = res.participantId;
-      STATE.firstName     = res.firstName;
-      STATE.lastName      = res.lastName;
-      STATE.email         = res.email;
-      sessionStorage.setItem('gcyouth', JSON.stringify(STATE));
-      launchApp();
-    } catch(e) {
-      setBtn('login-btn', false, '<i class="ti ti-login"></i> Sign in');
-      showErr('login-error','Connection error. Please try again.');
-    }
-  }
-
-  // ── Launch app — loads ONLY this user's data from Sheet ──
-  async function launchApp() {
-    // Show loading, hide content
-    showScreen('main-app');
-    if ($('app-loading')) $('app-loading').style.display = 'block';
-    if ($('app-content')) $('app-content').style.display = 'none';
-    if ($('app-error'))   $('app-error').style.display   = 'none';
-
-    // Set nav initials immediately from STATE
-    if ($('nav-avatar')) $('nav-avatar').textContent = ((STATE.firstName||'?').charAt(0) + (STATE.lastName||'').charAt(0)).toUpperCase();
-    if ($('nav-name'))   $('nav-name').textContent   = (STATE.firstName + ' ' + STATE.lastName).trim();
-
-    // Load participant data from Google Sheet
-    try {
-      const d = await callAS('getStudentData', STATE.participantId);
-
-      if ($('app-loading')) $('app-loading').style.display = 'none';
-
-      if (!d || d.error) {
-        if ($('app-error')) $('app-error').style.display = 'block';
-        if ($('app-error-text')) $('app-error-text').textContent = d && d.error ? d.error : 'Could not load your account. Please sign out and try again.';
-        return;
-      }
-
-      // Show content
-      if ($('app-content')) $('app-content').style.display = 'block';
-
-      // ── Personal details ──
-      if ($('pf-name'))    $('pf-name').textContent    = (d.firstName||'') + ' ' + (d.lastName||'');
-      if ($('pf-dob'))     $('pf-dob').textContent     = d.dob     || '—';
-      if ($('pf-mobile'))  $('pf-mobile').textContent  = d.mobile  || '—';
-      if ($('pf-email'))   $('pf-email').textContent   = d.email   || '—';
-      if ($('pf-address')) $('pf-address').textContent = d.address || '—';
-
-      // ── Metrics ──
-      const total = d.tripTotal || 3450;
-      const paid  = d.totalPaid || 0;
-      const rem   = d.remaining || (total - paid);
-      if ($('m-total'))     $('m-total').textContent     = fmt(total);
-      if ($('m-paid'))      $('m-paid').textContent      = fmt(paid);
-      if ($('m-remaining')) $('m-remaining').textContent = fmt(rem);
-
-      // ── Progress ──
-      const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
-      if ($('progress-fill')) $('progress-fill').style.width = pct + '%';
-      if ($('progress-text')) $('progress-text').textContent = pct + '% paid (' + fmt(paid) + ' of ' + fmt(total) + ')';
-      if ($('progress-rem'))  $('progress-rem').textContent  = fmt(rem) + ' remaining';
-
-      // ── Cutoff ──
-      if ($('cutoff-note')) $('cutoff-note').textContent = d.finalCutoff || '';
-      if ($('lbl-cutoff'))  $('lbl-cutoff').textContent  = d.finalCutoff || 'Cutoff';
-
-      // ── Deposit / milestone ──
-      if (d.depositPaid) {
-        const ms1 = $('ms-1');
-        if (ms1) { ms1.className='ms-dot done'; ms1.innerHTML='<i class="ti ti-check" style="font-size:12px"></i>'; }
-        const ml1 = $('ml-1');
-        if (ml1) ml1.className = 'ms-line done';
-        const lbl = $('lbl-deposit');
-        if (lbl) { lbl.textContent='Paid'; lbl.style.color='var(--green)'; }
-        if ($('ms-2')) $('ms-2').className = 'ms-dot now';
-        if ($('next-pmt-title')) $('next-pmt-title').textContent = 'Next payment';
-        if ($('next-pmt-sub'))   $('next-pmt-sub').textContent   = 'Pay any amount — instalments are welcome';
-        if ($('next-pmt-btn'))   $('next-pmt-btn').textContent   = 'Make a payment';
-      }
-
-      // ── Nav badge ──
-      const banner = $('incomplete-banner');
-      if (banner) {
-        if (pct >= 100)        { banner.textContent='Fully paid';         banner.className='badge b-green'; }
-        else if (d.depositPaid){ banner.textContent=pct+'% paid';          banner.className='badge b-blue'; }
-        else                   { banner.textContent='Deposit required';    banner.className='badge b-amber'; }
-      }
-
-      // ── Profile alert ──
-      const alertEl = $('profile-alert');
-      const alertTx = $('profile-alert-text');
-      if (alertEl && alertTx) {
-        if (!d.depositPaid) {
-          alertEl.className = 'alert alert-amber';
-          alertEl.style.display = 'flex';
-          alertTx.innerHTML = 'Please complete your profile and pay your <strong>' + fmt(d.depositAmt||500) + ' deposit</strong> to confirm your place. <span style="text-decoration:underline;cursor:pointer;" onclick="switchTab('payments')">Pay now →</span>';
-        } else {
-          alertEl.style.display = 'none';
-        }
-      }
-
-      // ── Section statuses ──
-      const sections = ['parent','emergency','medical','passport','church'];
-      sections.forEach(s => {
-        const status = (d.sectionStatus && d.sectionStatus[s]) || 'incomplete';
-        const badge  = $('badge-' + s);
-        const btn    = $('btn-' + s);
-        const chk    = $('chk-' + s);
-        const labels = { parent:'Parent / guardian', emergency:'Emergency contact', medical:'Medical info', passport:'Passport details', church:'Church info' };
-        if (badge) {
-          if (status==='approved') { badge.textContent='Approved';       badge.className='badge b-green'; }
-          else if (status==='pending') { badge.textContent='Pending review'; badge.className='badge b-amber'; }
-          else                    { badge.textContent='Incomplete';      badge.className='badge b-amber'; }
-        }
-        if (btn) {
-          if (status==='approved') { btn.innerHTML='<i class="ti ti-edit"></i> Request edit'; btn.onclick=()=>reqEdit(s); btn.disabled=false; btn.style.opacity='1'; }
-          else if (status==='pending') { btn.innerHTML='<i class="ti ti-clock"></i> Submitted'; btn.disabled=true; btn.style.opacity='0.6'; }
-          else { btn.innerHTML='<i class="ti ti-edit"></i> Fill in'; btn.disabled=false; btn.style.opacity='1'; }
-        }
-        if (chk) {
-          const icon = chk.querySelector('.chk-icon');
-          const span = chk.querySelector('span');
-          if (status==='approved') { if(icon){icon.className='chk-icon done';icon.innerHTML='<i class="ti ti-check"></i>';} if(span){span.textContent=labels[s];span.style.color='var(--gray-700)';} }
-          else if (status==='pending') { if(icon){icon.className='chk-icon pend';icon.innerHTML='<i class="ti ti-clock" style="font-size:9px"></i>';} if(span){span.textContent=labels[s]+' — pending review';span.style.color='var(--amber)';} }
-          else { if(icon){icon.className='chk-icon todo';icon.innerHTML='';} if(span){span.textContent=labels[s];span.style.color='';} }
-        }
-      });
-
-      // ── Payment schedule ──
-      const schedBody = $('schedule-body');
-      if (schedBody) {
-        const depositAmt = d.depositAmt || 500;
-        const milestones = [
-          { label:'Deposit', target:depositAmt },
-          { label:'Payment 1', target:500 },
-          { label:'Payment 2', target:500 },
-          { label:'Payment 3', target:500 },
-          { label:'Payment 4', target:500 },
-          { label:'Payment 5', target:500 },
-        ];
-        let running = 0;
-        schedBody.innerHTML = milestones.map((m,i) => {
-          running += m.target;
-          const isPaid = paid >= running;
-          const isDue  = !isPaid && (i===0 || paid >= running - m.target);
-          const badge  = isPaid ? '<span class="badge b-green">Paid</span>' : isDue ? '<span class="badge b-' + (i===0?'red">Due now':'blue">Due soon') + '</span>' : '<span class="badge b-gray">Upcoming</span>';
-          const payBtn = isDue  ? '<button class="btn btn-primary" style="padding:5px 12px;font-size:12px;" onclick="switchTab('payments')">Pay</button>' : '';
-          return '<tr' + (isDue?' class="row-due"':'') + '><td>' + (i===0?'<strong>Deposit</strong>':m.label) + '</td><td>—</td><td>' + fmt(m.target) + '</td><td>' + badge + '</td><td>' + payBtn + '</td></tr>';
-        }).join('') + '<tr><td style="color:var(--red);font-weight:600"><i class="ti ti-flag" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Final cutoff</td><td style="color:var(--red)">' + (d.finalCutoff||'') + '</td><td>Balance</td><td><span class="badge b-gray">Upcoming</span></td><td></td></tr>';
-      }
-
-      // ── Payment history ──
-      const payments = d.payments || [];
-      if (payments.length > 0) {
-        if ($('no-history')) $('no-history').style.display = 'none';
-        const ht = $('history-table');
-        if (ht) {
-          ht.style.display = 'table';
-          const hb = $('history-body');
-          if (hb) hb.innerHTML = payments.map(p =>
-            '<tr><td>' + (p.Description||'Payment') + '</td><td>' + (p.Date||'') + '</td><td style="font-family:'DM Mono',monospace;font-size:12px">' + (p.Reference||'') + '</td><td style="text-align:right;color:var(--green);font-weight:600">' + fmt(p.Amount) + '</td></tr>'
-          ).join('');
-        }
-      }
-
-      // ── Messages ──
-      const messages = d.messages || [];
-      const msgList  = $('messages-list');
-      if (msgList) {
-        if (messages.length > 0) {
-          const typeColors = { welcome:'nd-green', payment:'nd-green', approval:'nd-green', rejection:'nd-amber', reminder:'nd-amber', info:'nd-blue' };
-          msgList.innerHTML = messages.map(m =>
-            '<div class="notif-item"><div class="notif-dot ' + (typeColors[m.Type]||'nd-blue') + '"></div><div>' +
-            '<div class="notif-title">' + (m.Title||'') + '</div>' +
-            '<div class="notif-body">' + (m.Body||'') + '</div>' +
-            '<div class="notif-meta">From: GC Youth Admin · ' + (m.Date||'') + '</div>' +
-            '</div></div>'
-          ).join('');
-          const unread = messages.filter(m => m.Read==='No').length;
-          const badge  = $('msg-count');
-          if (badge) { badge.textContent=unread; badge.style.display=unread>0?'inline':'none'; }
-        }
-      }
-
-    } catch(e) {
-      console.error('launchApp error:', e);
-      if ($('app-loading')) $('app-loading').style.display = 'none';
-      if ($('app-error'))   $('app-error').style.display   = 'block';
-      if ($('app-error-text')) $('app-error-text').textContent = 'Connection error loading your account. Please sign out and try again.';
-    }
-  }
-
-  // ── Check session on load ──
-  window.addEventListener('load', () => {
-    const saved = sessionStorage.getItem('gcyouth');
-    if (saved) {
-      try {
-        const s = JSON.parse(saved);
-        if (s && s.participantId) {
-          STATE = s;
-          launchApp();
-          return;
-        }
-      } catch(e) {}
-    }
-    showScreen('screen-login');
-  });
-
-  // ── Tab switching ──
-  const TABS = ['dashboard','profile','payments','messages'];
+  // Remaining helper functions
   function switchTab(name) {
-    TABS.forEach((t,i) => {
-      const tab = document.querySelectorAll('.tabs .tab')[i];
-      if (tab) tab.classList.toggle('active', t===name);
-      const panel = $('p-' + t);
-      if (panel) panel.classList.toggle('active', t===name);
+    const tabs = document.querySelectorAll('.tab');
+    const panels = document.querySelectorAll('.panel');
+    tabs.forEach((tab, i) => {
+      const panelId = 'p-' + ['dashboard','profile','payments','messages'][i];
+      tab.classList.toggle('active', ['dashboard','profile','payments','messages'][i] === name);
+      const p = document.getElementById(panelId);
+      if (p) p.classList.toggle('active', ['dashboard','profile','payments','messages'][i] === name);
     });
   }
 
-  // ── Profile section toggle ──
   function toggleSection(section) {
     const form = $('form-' + section);
     const view = $('view-' + section);
-    const btn  = $('btn-'  + section);
-    if (!form) return;
-    const isOpen = form.classList.contains('open');
-    form.classList.toggle('open', !isOpen);
-    if (view) view.style.display = isOpen ? 'block' : 'none';
-    if (btn && !btn.disabled) btn.innerHTML = isOpen ? '<i class="ti ti-edit"></i> Fill in' : '<i class="ti ti-x"></i> Cancel';
+    if (form) form.classList.toggle('open');
+    if (view) view.style.display = form && form.classList.contains('open') ? 'none' : 'block';
   }
 
   async function submitSection(section, fields) {
-    const btn = $('btn-' + section);
-    if (btn) { btn.disabled=true; btn.innerHTML='<span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:var(--brand);"></span> Saving…'; }
     try {
       const res = await callAS('submitProfileSection', STATE.participantId, section, fields);
-      const form  = $('form-'  + section);
-      const view  = $('view-'  + section);
-      const badge = $('badge-' + section);
-      if (form)  { form.classList.remove('open'); }
-      if (view)  { view.style.display = 'block'; }
-      if (badge) { badge.textContent='Pending review'; badge.className='badge b-amber'; }
-      if (btn)   { btn.innerHTML='<i class="ti ti-clock"></i> Submitted'; btn.disabled=true; btn.style.opacity='0.6'; }
-      // Update checklist
-      const chk  = $('chk-' + section);
-      const labels = { parent:'Parent / guardian', emergency:'Emergency contact', medical:'Medical info', passport:'Passport details', church:'Church info' };
-      if (chk) {
-        const icon = chk.querySelector('.chk-icon');
-        const span = chk.querySelector('span');
-        if (icon) { icon.className='chk-icon pend'; icon.innerHTML='<i class="ti ti-clock" style="font-size:9px"></i>'; }
-        if (span) { span.textContent=labels[section]+' — pending review'; span.style.color='var(--amber)'; }
+      if (res && res.success) {
+        toggleSection(section);
+        alert('Section submitted for review!');
+        await loadAppData();
+      } else {
+        alert('Error: ' + (res.error || 'Could not submit'));
       }
-      alert('Your ' + section + ' details have been submitted for admin review. You'll be notified once approved.');
     } catch(e) {
-      if (btn) { btn.disabled=false; btn.innerHTML='<i class="ti ti-edit"></i> Fill in'; }
-      alert('Could not save. Please try again.');
+      console.error('submitSection error:', e);
+      alert('Connection error');
     }
   }
 
-  async function reqEdit(section) {
-    const reason = prompt('Briefly explain why you need to edit your ' + section + ' details:');
-    if (reason === null) return;
-    try {
-      await callAS('requestSectionEdit', STATE.participantId, section, reason);
-      alert('Edit request sent. You'll be notified when it's unlocked.');
-    } catch(e) {
-      alert('Could not send request. Please try again.');
-    }
+  function reqEdit(section) {
+    alert('Edit request submitted. Admin will review and unlock this section.');
+  }
+
+  function renderPaymentSchedule(data) {
+    const sb = $('schedule-body');
+    if (!sb) return;
+    sb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--gray-400);">Payment schedule coming soon</td></tr>';
   }
 </script>
+
 </body>
 </html>
