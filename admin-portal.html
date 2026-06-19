@@ -480,9 +480,9 @@
           <div class="form-grid">
             <div class="form-group"><label>First name</label><input type="text" id="r-fname" placeholder=""></div>
             <div class="form-group"><label>Last name</label><input type="text" id="r-lname" placeholder=""></div>
-            <div class="form-group"><label>Mobile number</label><input type="tel" id="r-mobile" placeholder=""></div>
-            <div class="form-group"><label>Email address</label><input type="email" id="r-email" placeholder="" onkeydown="if(event.key==='Enter')saveParticipant()"></div>
-            <div class="form-group form-full"><label>Notes (optional — admin only)</label><textarea id="r-notes" rows="2" placeholder="" style="resize:vertical;font-family:inherit;font-size:13px;"></textarea></div>
+            <div class="form-group"><label>Mobile number</label><input type="tel" id="r-mobile" placeholder="+61 4XX XXX XXX"></div>
+            <div class="form-group"><label>Email address</label><input type="email" id="r-email" placeholder="jordan@email.com" onkeydown="if(event.key==='Enter')saveParticipant()"></div>
+            <div class="form-group form-full"><label>Notes (optional — admin only)</label><textarea id="r-notes" rows="2" placeholder="Any relevant notes about this participant…" style="resize:vertical;font-family:inherit;font-size:13px;"></textarea></div>
           </div>
           <div id="reg-error" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:12px;align-items:center;gap:8px;">
             <i class="ti ti-alert-circle"></i><div></div>
@@ -513,8 +513,8 @@
           <div style="display:flex;align-items:center;gap:14px;">
             <div class="av av-blue" style="width:52px;height:52px;font-size:16px;">JM</div>
             <div>
-              <div style="font-size:18px;font-weight:700;" id="sp-name">Select a participant to view their profile</div>
-              <div style="font-size:13px;color:var(--gray-500);margin-top:2px;">Participant #2041 · jordan.m@email.com</div>
+              <div style="font-size:18px;font-weight:700;" id="sp-name">No participant selected</div>
+              <div style="font-size:13px;color:var(--gray-500);margin-top:2px;" id="sp-meta">· —</div>
             </div>
           </div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;">
@@ -536,37 +536,37 @@
               <div class="pgroup-title">Personal details</div>
               <div class="pgrid">
                 <div class="pitem"><label>Date of birth</label><span>12 Mar 2009 (age 17)</span></div>
-                <div class="pitem"><label>Gender</label><span>Male</span></div>
-                <div class="pitem"><label>Mobile</label><span>+61 412 345 678</span></div>
-                <div class="pitem"><label>Email</label><span>jordan.m@email.com</span></div>
-                <div class="pitem full"><label>Address</label><span>14 Church St, Penrith NSW 2750</span></div>
+                <div class="pitem"><label>Gender</label><span id="sp-gender">—</span></div>
+                <div class="pitem"><label>Mobile</label><span id="sp-mobile">—</span></div>
+                <div class="pitem"><label>Email</label><span id="sp-email">—</span></div>
+                <div class="pitem full"><label>Address</label><span id="sp-address">—</span></div>
               </div>
             </div>
             <div class="pgroup">
               <div class="pgroup-title">Parent / guardian</div>
               <div class="pgrid">
                 <div class="pitem"><label>Name</label><span id="sp-parent-name">—</span></div>
-                <div class="pitem"><label>Relationship</label><span>Mother</span></div>
-                <div class="pitem"><label>Mobile</label><span>+61 412 000 111</span></div>
-                <div class="pitem"><label>Email</label><span>linda.m@email.com</span></div>
+                <div class="pitem"><label>Relationship</label><span id="sp-parent-rel">—</span></div>
+                <div class="pitem"><label>Mobile</label><span id="sp-parent-ph">—</span></div>
+                <div class="pitem"><label>Email</label><span id="sp-parent-email">—</span></div>
               </div>
             </div>
             <div class="pgroup">
               <div class="pgroup-title">Emergency contact</div>
               <div class="pgrid">
-                <div class="pitem"><label>Name</label><span>David Mitchell</span></div>
-                <div class="pitem"><label>Relationship</label><span>Father</span></div>
-                <div class="pitem"><label>Mobile</label><span>+61 412 111 222</span></div>
-                <div class="pitem"><label>Email</label><span>david.m@email.com</span></div>
+                <div class="pitem"><label>Name</label><span id="sp-em-name">—</span></div>
+                <div class="pitem"><label>Relationship</label><span id="sp-em-rel">—</span></div>
+                <div class="pitem"><label>Mobile</label><span id="sp-em-ph">—</span></div>
+                <div class="pitem"><label>Email</label><span id="sp-em-email">—</span></div>
               </div>
             </div>
             <div class="pgroup">
               <div class="pgroup-title">Church &amp; group</div>
               <div class="pgrid">
-                <div class="pitem"><label>Church</label><span>GC Church Penrith</span></div>
-                <div class="pitem"><label>Small group</label><span>—</span></div>
-                <div class="pitem"><label>Years attending</label><span>3 years</span></div>
-                <div class="pitem"><label>Baptised</label><span>Yes</span></div>
+                <div class="pitem"><label>Church</label><span id="sp-church">—</span></div>
+                <div class="pitem"><label>Small group</label><span id="sp-group">—</span></div>
+                <div class="pitem"><label>Years attending</label><span id="sp-years">—</span></div>
+                <div class="pitem"><label>Baptised</label><span id="sp-epi">—</span></div>
               </div>
             </div>
           </div>
@@ -574,12 +574,12 @@
             <div class="pgroup">
               <div class="pgroup-title">Medical &amp; dietary <span class="badge b-amber" style="margin-left:6px;">Pending review</span></div>
               <div class="pgrid">
-                <div class="pitem"><label>Allergies</label><span>—</span></div>
-                <div class="pitem"><label>Dietary</label><span>No restrictions</span></div>
-                <div class="pitem"><label>Medicare no.</label><span>2345 6789 0 / 1</span></div>
-                <div class="pitem"><label>Blood type</label><span>A+</span></div>
-                <div class="pitem"><label>EpiPen</label><span>Yes</span></div>
-                <div class="pitem"><label>Inhaler</label><span>Yes (Ventolin)</span></div>
+                <div class="pitem"><label>Allergies</label><span id="sp-allergy">—</span></div>
+                <div class="pitem"><label>Dietary</label><span id="sp-diet">—</span></div>
+                <div class="pitem"><label>Medicare no.</label><span id="sp-medicare">—</span></div>
+                <div class="pitem"><label>Blood type</label><span id="sp-blood">—</span></div>
+                <div class="pitem"><label>EpiPen</label><span id="sp-epi">—</span></div>
+                <div class="pitem"><label>Inhaler</label><span id="sp-inhaler">—</span></div>
               </div>
             </div>
             <div class="pgroup">
@@ -587,24 +587,24 @@
               <div class="pgrid">
                 <div class="pitem"><label>Passport no.</label><span class="p-missing">Pending — not yet entered</span></div>
                 <div class="pitem"><label>Expiry</label><span class="p-missing">Pending</span></div>
-                <div class="pitem"><label>Nationality</label><span>Australian</span></div>
-                <div class="pitem"><label>Visa required</label><span>No</span></div>
+                <div class="pitem"><label>Nationality</label><span id="sp-nat">—</span></div>
+                <div class="pitem"><label>Visa required</label><span id="sp-visa">—</span></div>
               </div>
             </div>
             <div class="pgroup">
               <div class="pgroup-title">Participant journey</div>
               <div class="journey">
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Profile created</div><div class="j-sub">Admin · 14 Jan 2025</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Invite sent &amp; account activated</div><div class="j-sub">15 Jan 2025 · Jordan accepted invite</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Payment schedule set</div><div class="j-sub">Admin · 18 Jan 2025</div></div></div>
-                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Deposit paid</div><div class="j-sub">$500 · 1 Mar 2025 · Portal unlocked</div></div></div>
-                <div class="j-step"><div class="j-dot now" style="font-size:8px">···</div><div class="j-line"></div><div><div class="j-title">Ongoing payments</div><div class="j-sub">$1,000 paid · $2,450 remaining</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Profile created</div><div class="j-sub">—</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Invite sent &amp; account activated</div><div class="j-sub">—</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Payment schedule set</div><div class="j-sub">—</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Deposit paid</div><div class="j-sub">—</div></div></div>
+                <div class="j-step"><div class="j-dot now" style="font-size:8px">···</div><div class="j-line"></div><div><div class="j-title">Ongoing payments</div><div class="j-sub">—</div></div></div>
                 <div class="j-step"><div class="j-dot future">6</div><div class="j-line"></div><div><div class="j-title">Fully paid</div><div class="j-sub">Due by 1 Jul 2027</div></div></div>
               </div>
             </div>
             <div class="pgroup">
               <div class="pgroup-title">Admin notes</div>
-              <textarea style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);min-height:80px;resize:vertical;outline:none;" placeholder="Add a note about this participant…">Keen participant, parents very supportive. Mum Linda is best contact. Need to chase passport docs before Feb end.</textarea>
+              <textarea style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);min-height:80px;resize:vertical;outline:none;" placeholder="Add a note about this participant…"></textarea>
               <button class="btn btn-sm" style="margin-top:8px;"><i class="ti ti-device-floppy"></i> Save note</button>
             </div>
           </div>
@@ -718,7 +718,7 @@
         <div class="sync-row pending" id="pr-1">
           <div>
             <div class="sync-detail">Pending review</div>
-            <div class="sync-sub">Student submitted details will appear here</div>
+            <div class="sync-sub">Details from student submission will appear here</div>
           </div>
           <div class="sync-actions">
             <button class="btn btn-sm" onclick="goTab('profile')"><i class="ti ti-eye"></i> View profile</button>
@@ -729,7 +729,7 @@
         <div class="sync-row pending" id="pr-2">
           <div>
             <div class="sync-detail">Pending review</div>
-            <div class="sync-sub">Submitted 16 May 2026 · Passport: PA9876543 · Expiry: 12 Jun 2031 · Nationality: Australian · Visa: No</div>
+            <div class="sync-sub">Details from student submission will appear here</div>
           </div>
           <div class="sync-actions">
             <button class="btn btn-sm"><i class="ti ti-eye"></i> View profile</button>
@@ -744,7 +744,7 @@
         <div class="sync-row pending" id="pr-3">
           <div>
             <div class="sync-detail">Edit request</div>
-            <div class="sync-sub">Reason: "Phone number has changed" · Submitted 15 May 2026</div>
+            <div class="sync-sub">Reason: "Reason will appear here" · Submitted 15 May 2026</div>
           </div>
           <div class="sync-actions">
             <button class="btn btn-primary btn-sm" onclick="approveChange('pr-3','Sam O\'Brien','Emergency contact unlocked')">Unlock for edit</button>
@@ -772,8 +772,8 @@
         <div class="card-title" style="margin-bottom:1rem;">Accounts needing attention</div>
         <div class="alert-row danger">
           <div>
-            <div class="ar-title" style="color:var(--red)">— Payment overdue</div>
-            <div class="ar-sub" style="color:var(--red)">Overdue details will appear here once participants are registered</div>
+            <div class="ar-title" style="color:var(--red)">— Overdue payment</div>
+            <div class="ar-sub" style="color:var(--red)">Overdue accounts will appear here once participants are registered</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm" onclick="goTab('profile')"><i class="ti ti-eye"></i> View</button>
@@ -782,8 +782,8 @@
         </div>
         <div class="alert-row danger" style="margin-bottom:1.25rem;">
           <div>
-            <div class="ar-title" style="color:var(--red)">— Deposit not yet received</div>
-            <div class="ar-sub" style="color:var(--red)">Deposit due 1 Mar 2025 · $500 required · $0 paid · Portal locked</div>
+            <div class="ar-title" style="color:var(--red)">— No deposit received</div>
+            <div class="ar-sub" style="color:var(--red)">Missing deposit details will appear here</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm"><i class="ti ti-eye"></i> View</button>
@@ -795,7 +795,7 @@
         <div class="alert-row warn">
           <div>
             <div class="ar-title" style="color:var(--amber)">5 participants — Payment 2 due 1 Mar 2026</div>
-            <div class="ar-sub" style="color:var(--amber)">Jordan M, Priya K, Sam O, Lena B, Chris F · $500 each</div>
+            <div class="ar-sub" style="color:var(--amber)">Participants with upcoming payments will be listed here</div>
           </div>
           <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Remind all</button>
         </div>
@@ -886,8 +886,8 @@
     if (errEl) errEl.style.display = 'none';
     showScreen('admin-app');
 
-    // Load participants in background — don't block login
-    setTimeout(() => loadParticipants(), 100);
+    // Load all data from Google Sheet
+    setTimeout(() => initAdminData(), 100);
   }
 
   // ── Load participants from Apps Script ──
@@ -975,104 +975,203 @@
       document.querySelectorAll('.tabs .tab')[i].classList.toggle('active', t === name);
       document.getElementById('t-' + t).classList.toggle('active', t === name);
     });
+    if (name === 'participants') loadParticipants();
+    if (name === 'pending')      loadPending();
   }
 
-  // ── Participant data ──
-  const participants = [];  // loaded from Google Sheet via loadParticipants()
+  // ── Live participant data — loaded from Google Sheet only ──
+  let ALL_PARTICIPANTS = [];
+  let CUR_FILTER = 'all';
 
-  let curFilter = 'all';
+  function fmt(n) { return '$' + Number(n || 0).toLocaleString(); }
 
-  function pct(p) { return Math.round((p.paid / p.total) * 100); }
+  function pct(p) {
+    const total = p.total || p.tripTotal || 3450;
+    const paid  = p.paid  || p.totalPaid || 0;
+    return total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+  }
+
   function barColor(p) {
-    if (p.status === 'overdue') return '#ef4444';
-    if (p.status === 'paid') return '#2d7a3a';
-    if (p.status === 'no-deposit') return '#f59e0b';
+    const paid = p.paid || p.totalPaid || 0;
+    if (!p.depositPaid && paid === 0) return '#f59e0b';
+    if (pct(p) >= 100) return '#2d7a3a';
     return '#3b72c8';
   }
 
   function statusBadge(p) {
-    if (p.status === 'paid') return '<span class="badge b-green">Fully paid</span>';
-    if (p.status === 'overdue') return '<span class="badge b-red">Overdue</span>';
-    if (p.status === 'no-deposit') return '<span class="badge b-amber">No deposit</span>';
+    const paid  = p.paid  || p.totalPaid || 0;
+    const total = p.total || p.tripTotal || 3450;
+    if (paid >= total)        return '<span class="badge b-green">Fully paid</span>';
+    if (!p.depositPaid)       return '<span class="badge b-amber">No deposit</span>';
     return '<span class="badge b-blue">On track</span>';
   }
 
+  function getInitials(name) {
+    const parts = (name || '').split(' ');
+    return (parts[0] ? parts[0][0] : '') + (parts[1] ? parts[1][0] : '');
+  }
+
+  const AV_COLORS = ['av-blue','av-green','av-purple','av-coral','av-teal','av-pink'];
+
   function renderTable(list) {
-    document.getElementById('ptBody').innerHTML = list.map(p => `
-      <tr class="clickrow" onclick="goTab('profile')">
-        <td>
-          <div class="namecell">
-            <div class="av ${p.av}">${p.ini}</div>
-            <div>
-              <div style="font-weight:600">${p.name}</div>
-              <div style="font-size:12px;color:var(--gray-400)">#${2040 + p.id}</div>
-            </div>
-          </div>
-        </td>
-        <td>${p.profileOk ? '<span class="badge b-green">Complete</span>' : '<span class="badge b-amber">Incomplete</span>'}</td>
-        <td>${p.deposit ? '<span class="badge b-green">Paid</span>' : '<span class="badge b-red">None</span>'}</td>
-        <td style="font-weight:600;color:var(--green)">$${p.paid.toLocaleString()}</td>
-        <td style="color:var(--gray-500)">$${(p.total - p.paid).toLocaleString()}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="mini-bar-wrap"><div class="mini-bar" style="width:${pct(p)}%;background:${barColor(p)}"></div></div>
-            <span style="font-size:12px;color:var(--gray-400)">${pct(p)}%</span>
-            ${statusBadge(p)}
-          </div>
-        </td>
-        <td><span style="font-size:13px;color:var(--brand);font-weight:500;cursor:pointer">View →</span></td>
-      </tr>`).join('');
+    const body = document.getElementById('ptBody');
+    if (!body) return;
+
+    if (!list || list.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--gray-400);font-size:14px;">' +
+        '<i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:10px;opacity:.3"></i>' +
+        'No participants yet. <span style="color:var(--brand);cursor:pointer;text-decoration:underline;" onclick="goTab('register')">Register the first one →</span>' +
+        '</td></tr>';
+      return;
+    }
+
+    body.innerHTML = list.map((p, i) => {
+      const ini    = getInitials(p.name || '');
+      const av     = AV_COLORS[i % AV_COLORS.length];
+      const pc     = pct(p);
+      const paid   = p.paid || p.totalPaid || 0;
+      const total  = p.total || p.tripTotal || 3450;
+      const rem    = total - paid;
+      return '<tr class="clickrow" onclick="viewParticipant('' + (p.id || '') + '')">' +
+        '<td><div class="namecell"><div class="av ' + av + '">' + ini + '</div>' +
+        '<div><div style="font-weight:600">' + (p.name || '') + '</div>' +
+        '<div style="font-size:12px;color:var(--gray-400)">' + (p.email || '') + '</div></div></div></td>' +
+        '<td>' + (p.profileComplete === 'Yes' ? '<span class="badge b-green">Complete</span>' : '<span class="badge b-amber">Incomplete</span>') + '</td>' +
+        '<td>' + (p.depositPaid ? '<span class="badge b-green">Paid</span>' : '<span class="badge b-red">None</span>') + '</td>' +
+        '<td style="font-weight:600;color:var(--green)">' + fmt(paid) + '</td>' +
+        '<td style="color:var(--gray-500)">' + fmt(rem) + '</td>' +
+        '<td><div style="display:flex;align-items:center;gap:8px;">' +
+        '<div class="mini-bar-wrap"><div class="mini-bar" style="width:' + pc + '%;background:' + barColor(p) + '"></div></div>' +
+        '<span style="font-size:12px;color:var(--gray-400)">' + pc + '%</span>' +
+        statusBadge(p) + '</div></td>' +
+        '<td><span style="font-size:13px;color:var(--brand);font-weight:500;cursor:pointer">View →</span></td>' +
+        '</tr>';
+    }).join('');
+
+    // Update metrics
+    const total_p   = list.length;
+    const complete  = list.filter(p => p.profileComplete === 'Yes').length;
+    const deposits  = list.filter(p => p.depositPaid).length;
+    if ($('m-total'))    $('m-total').textContent    = total_p;
+    if ($('m-profiles')) $('m-profiles').textContent = complete + ' / ' + total_p;
+    if ($('m-deposits')) $('m-deposits').textContent = deposits + ' / ' + total_p;
+    if ($('m-overdue'))  $('m-overdue').textContent  = list.filter(p => p.status === 'overdue').length;
   }
 
   function doFilter(f, btn) {
-    curFilter = f;
+    CUR_FILTER = f;
     document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
-    btn.classList.add('on');
-    let list = participants;
-    if (f === 'overdue') list = list.filter(p => p.status === 'overdue');
-    else if (f === 'incomplete') list = list.filter(p => !p.profileOk);
-    else if (f === 'no-deposit') list = list.filter(p => !p.deposit);
-    else if (f === 'paid') list = list.filter(p => p.status === 'paid');
+    if (btn) btn.classList.add('on');
+    applyFilter();
+  }
+
+  function applyFilter() {
+    let list = ALL_PARTICIPANTS;
+    if (CUR_FILTER === 'overdue')    list = list.filter(p => p.status === 'overdue');
+    if (CUR_FILTER === 'incomplete') list = list.filter(p => p.profileComplete !== 'Yes');
+    if (CUR_FILTER === 'no-deposit') list = list.filter(p => !p.depositPaid);
+    if (CUR_FILTER === 'paid')       list = list.filter(p => (p.paid || p.totalPaid || 0) >= (p.total || p.tripTotal || 3450));
     renderTable(list);
   }
 
-  function doSearch(v) {
-    v = v.toLowerCase();
-    let list = participants;
-    if (curFilter !== 'all') {
-      if (curFilter === 'overdue') list = list.filter(p => p.status === 'overdue');
-      else if (curFilter === 'incomplete') list = list.filter(p => !p.profileOk);
-      else if (curFilter === 'no-deposit') list = list.filter(p => !p.deposit);
-      else if (curFilter === 'paid') list = list.filter(p => p.status === 'paid');
+  function doSearch(val) {
+    const q = val.toLowerCase();
+    let list = ALL_PARTICIPANTS;
+    if (CUR_FILTER !== 'all') {
+      if (CUR_FILTER === 'overdue')    list = list.filter(p => p.status === 'overdue');
+      if (CUR_FILTER === 'incomplete') list = list.filter(p => p.profileComplete !== 'Yes');
+      if (CUR_FILTER === 'no-deposit') list = list.filter(p => !p.depositPaid);
+      if (CUR_FILTER === 'paid')       list = list.filter(p => (p.paid||p.totalPaid||0) >= (p.total||p.tripTotal||3450));
     }
-    list = list.filter(p => p.name.toLowerCase().includes(v) || String(2040 + p.id).includes(v));
+    list = list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.email||'').toLowerCase().includes(q));
     renderTable(list);
   }
 
-  // ── Stepper ──
-  let curStep = 1;
-  const totalSteps = 5;
-  const stepLabels = ['Personal', 'Parent / guardian', 'Medical', 'Passport & travel', 'Church & group'];
+  function viewParticipant(id) {
+    goTab('profile');
+    // Profile view will be populated when sheet data is loaded
+  }
 
-
+  async function loadParticipants() {
+    const body = document.getElementById('ptBody');
+    if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400);">' +
+      '<span class="spinner spinner-dark"></span> Loading participants from sheet…</td></tr>';
+    try {
+      const parts = await callAS('getAllParticipants');
+      if (!parts || parts.error) {
+        if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--red);">Could not load participants. Check Apps Script connection.</td></tr>';
+        return;
+      }
+      ALL_PARTICIPANTS = Array.isArray(parts) ? parts : [];
+      applyFilter();
+      // Populate payment schedule dropdown
+      const sel = document.getElementById('pmt-participant');
+      if (sel) {
+        sel.innerHTML = '<option value="">Select participant…</option>' +
+          ALL_PARTICIPANTS.map(p => '<option value="' + p.id + '">' + p.name + ' (' + (p.email||'') + ')</option>').join('');
+      }
+    } catch(e) {
+      console.error('loadParticipants error:', e);
+      if (body) body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--red);">Connection error. Please refresh.</td></tr>';
+    }
+  }
 
   function resetReg() {
-    curStep = 1;
-    showStep(1);
-    document.getElementById('regDone').style.display = 'none';
+    clearRegForm();
+    if ($('regForm')) $('regForm').style.display = 'block';
+    if ($('regDone')) $('regDone').style.display = 'none';
   }
 
-  // ── Approve pending change ──
-  function approveChange(rowId, name, section) {
-    const row = document.getElementById(rowId);
-    if (!row) return;
-    row.classList.remove('pending');
-    row.classList.add('approved');
-    row.querySelector('.sync-actions').innerHTML = '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;vertical-align:-1px;margin-right:3px"></i>Approved &amp; synced</span>';
+  // ── Approve pending change (visual only — real approval goes via Apps Script) ──
+  async function approveChange(rowId, participantId, section) {
+    try {
+      await callAS('approveProfileSection', participantId, section);
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.classList.remove('pending');
+        row.classList.add('approved');
+        const actions = row.querySelector('.sync-actions');
+        if (actions) actions.innerHTML = '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;vertical-align:-1px;margin-right:3px"></i>Approved &amp; synced</span>';
+      }
+    } catch(e) {
+      alert('Could not approve. Please try again.');
+    }
   }
 
-  // ── Init ──
-  renderTable(participants);
+  // ── Load pending changes from Sheet ──
+  async function loadPending() {
+    const list = document.getElementById('pending-list');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);"><span class="spinner spinner-dark"></span> Loading…</div>';
+    try {
+      const rows = await callAS('getPendingProfileChanges');
+      if (!rows || rows.error || rows.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:14px;"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>No pending changes — all caught up.</div>';
+        return;
+      }
+      list.innerHTML = rows.map(r =>
+        '<div class="sync-row pending" id="pr-' + r.participantId + '-' + r.section + '">' +
+        '<div><div class="sync-detail">' + (r.participantName||'') + ' — ' + (r.section||'') + '</div>' +
+        '<div class="sync-sub">Submitted ' + (r.submittedAt||'') + ' · ' + (r.fields||[]).map(f => f.field + ': ' + f.value).join(' · ') + '</div></div>' +
+        '<div class="sync-actions">' +
+        '<button class="btn btn-success btn-sm" onclick="approveChange('pr-' + r.participantId + '-' + r.section + '','' + r.participantId + '','' + r.section + '')"><i class="ti ti-check"></i> Approve</button>' +
+        '<button class="btn btn-danger btn-sm">Reject</button>' +
+        '</div></div>'
+      ).join('');
+      // Update badge
+      const cnt = document.getElementById('pending-count');
+      if (cnt) { cnt.textContent = rows.length; cnt.style.display = 'inline'; }
+    } catch(e) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Could not load pending changes.</div>';
+    }
+  }
+
+  // ── Init — load from Sheet on login ──
+  // Called by doLogin() after password is verified
+  function initAdminData() {
+    loadParticipants();
+    loadPending();
+  }
 </script>
 </body>
 </html>
