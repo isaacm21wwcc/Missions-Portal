@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GC Youth — Admin Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --brand: #1a4fa0;
+    --brand-light: #e8f0fb;
+    --brand-mid: #3b72c8;
+    --green: #2d7a3a;
+    --green-light: #e6f4ea;
+    --amber: #a05c00;
+    --amber-light: #fef3e2;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --purple: #5b21b6;
+    --purple-light: #ede9fe;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-900);
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  /* ── LOGIN ── */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .login-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .brand-mark {
+    width: 52px; height: 52px;
+    background: var(--brand);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .brand-mark i { font-size: 26px; color: #fff; }
+
+  /* ── APP SHELL ── */
+  .app-shell { display: none; min-height: 100vh; }
+
+  .topnav {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 15px;
+  }
+
+  .nav-brand-icon {
+    width: 32px; height: 32px;
+    background: var(--brand);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .nav-brand-icon i { font-size: 16px; color: #fff; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-admin-tag { font-size: 11px; background: var(--purple-light); color: var(--purple); padding: 3px 10px; border-radius: 99px; font-weight: 600; }
+
+  .app-body {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  /* ── SHARED COMPONENTS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--gray-300);
+    background: #fff;
+    color: var(--gray-700);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: var(--gray-100); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .btn-primary:hover { background: #163f82; }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-success:hover { background: #235e2c; }
+  .btn-danger { background: var(--red-light); color: var(--red); border-color: #fca5a5; }
+  .btn-danger:hover { background: #fee2e2; }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+  .form-group { margin-bottom: 0.875rem; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-500); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    font-family: inherit; font-size: 14px;
+    color: var(--gray-900); background: #fff;
+    transition: border-color 0.15s; outline: none;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(26,79,160,0.1);
+  }
+  .form-group input:disabled { background: var(--gray-100); color: var(--gray-500); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-full { grid-column: 1 / -1; }
+  .form-section-label {
+    font-size: 11px; font-weight: 700; color: var(--gray-400);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 1.25rem 0 0.875rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-100);
+    grid-column: 1 / -1;
+  }
+  .form-section-label.first { margin-top: 0; padding-top: 0; border-top: none; }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow);
+  }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px;
+  }
+
+  .card-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--gray-500);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  .badge {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 99px;
+    display: inline-block; white-space: nowrap;
+  }
+  .b-green { background: var(--green-light); color: var(--green); }
+  .b-blue { background: var(--brand-light); color: var(--brand); }
+  .b-amber { background: var(--amber-light); color: var(--amber); }
+  .b-red { background: var(--red-light); color: var(--red); }
+  .b-gray { background: var(--gray-100); color: var(--gray-500); }
+  .b-purple { background: var(--purple-light); color: var(--purple); }
+
+  .alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 16px; border-radius: var(--radius);
+    font-size: 13px; margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+  .alert i { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-blue { background: var(--brand-light); color: var(--brand); }
+  .alert-amber { background: var(--amber-light); color: var(--amber); }
+  .alert-green { background: var(--green-light); color: var(--green); }
+  .alert-red { background: var(--red-light); color: var(--red); }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--gray-200); margin-bottom: 1.5rem; overflow-x: auto; }
+  .tab {
+    padding: 10px 16px; font-size: 14px; font-weight: 500;
+    cursor: pointer; border: none; background: none;
+    color: var(--gray-500); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+    font-family: inherit; transition: color 0.15s;
+  }
+  .tab:hover { color: var(--gray-700); }
+  .tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+  .tab .bc { font-size: 11px; background: var(--red-light); color: var(--red); padding: 1px 6px; border-radius: 99px; }
+  .panel { display: none; } .panel.active { display: block; }
+
+  /* ── METRICS ── */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .metric { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow); }
+  .metric-label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; font-weight: 500; }
+  .metric-value { font-size: 24px; font-weight: 600; }
+  .mv-green { color: var(--green); } .mv-blue { color: var(--brand); }
+  .mv-amber { color: var(--amber); } .mv-red { color: var(--red); }
+
+  /* ── PARTICIPANT TABLE ── */
+  .filter-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+  .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fpill {
+    font-size: 12px; padding: 5px 13px; border-radius: 99px;
+    border: 1px solid var(--gray-200); background: #fff;
+    color: var(--gray-500); cursor: pointer; font-weight: 500;
+    transition: all 0.15s;
+  }
+  .fpill:hover { background: var(--gray-100); }
+  .fpill.on { background: var(--brand-light); color: var(--brand); border-color: #93b4e8; }
+  .search-wrap { display: flex; align-items: center; gap: 6px; }
+  .search-wrap input {
+    font-size: 13px; padding: 7px 12px;
+    border: 1px solid var(--gray-300); border-radius: var(--radius);
+    background: #fff; color: var(--gray-900); width: 190px; outline: none;
+    font-family: inherit;
+  }
+  .search-wrap input:focus { border-color: var(--brand); }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table th { font-size: 11px; font-weight: 700; color: var(--gray-400); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gray-200); text-transform: uppercase; letter-spacing: 0.04em; }
+  .data-table td { padding: 11px 10px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr.clickrow { cursor: pointer; }
+  .data-table tr.clickrow:hover td { background: var(--gray-50); }
+
+  .av {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .av-blue { background: var(--brand-light); color: var(--brand); }
+  .av-green { background: var(--green-light); color: var(--green); }
+  .av-purple { background: var(--purple-light); color: var(--purple); }
+  .av-coral { background: #fff1ee; color: #9a3412; }
+  .av-teal { background: #e6faf5; color: #0f766e; }
+  .av-pink { background: #fce7f3; color: #9d174d; }
+  .namecell { display: flex; align-items: center; gap: 10px; }
+
+  .mini-bar-wrap { background: var(--gray-100); border-radius: 99px; height: 6px; overflow: hidden; width: 72px; display: inline-block; vertical-align: middle; }
+  .mini-bar { height: 100%; border-radius: 99px; }
+
+  /* ── STEPPER ── */
+  .stepper { display: flex; align-items: flex-start; margin-bottom: 1.75rem; }
+  .step-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sdot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; flex-shrink: 0;
+    border: 2px solid transparent;
+  }
+  .sdot.done { background: var(--green-light); color: var(--green); border-color: #4caf6e; }
+  .sdot.active { background: var(--brand-light); color: var(--brand); border-color: var(--brand); }
+  .sdot.future { background: var(--gray-100); color: var(--gray-400); border-color: var(--gray-200); }
+  .slabel { font-size: 10px; color: var(--gray-400); text-align: center; max-width: 62px; line-height: 1.3; font-weight: 500; }
+  .slabel.active { color: var(--brand); font-weight: 600; }
+  .sline { flex: 1; height: 2px; background: var(--gray-200); margin: 14px 4px 0; }
+  .sline.done { background: var(--green); }
+
+  /* ── PROFILE VIEW ── */
+  .profile-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .pgroup { margin-bottom: 1.25rem; }
+  .pgroup-title { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 7px; border-bottom: 1px solid var(--gray-200); margin-bottom: 10px; }
+  .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+  .pitem label { font-size: 11px; color: var(--gray-400); display: block; margin-bottom: 2px; }
+  .pitem span { font-size: 14px; color: var(--gray-800); }
+  .pitem.full { grid-column: 1 / -1; }
+  .p-missing { color: var(--amber) !important; font-style: italic; font-size: 13px !important; }
+
+  /* ── JOURNEY TIMELINE ── */
+  .journey { display: flex; flex-direction: column; }
+  .j-step { display: flex; gap: 12px; padding-bottom: 14px; position: relative; }
+  .j-step:last-child { padding-bottom: 0; }
+  .j-line { position: absolute; left: 10px; top: 22px; bottom: 0; width: 1px; background: var(--gray-200); }
+  .j-step:last-child .j-line { display: none; }
+  .j-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; margin-top: 1px; }
+  .j-dot.done { background: var(--green-light); color: var(--green); }
+  .j-dot.now { background: var(--brand-light); color: var(--brand); font-size: 8px; }
+  .j-dot.future { background: var(--gray-100); color: var(--gray-400); }
+  .j-title { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+  .j-sub { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+
+  /* ── PAYMENT SCHEDULE EDITOR ── */
+  .sched-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sched-table th { font-size: 11px; font-weight: 700; color: var(--gray-400); text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--gray-200); text-transform: uppercase; letter-spacing: 0.04em; }
+  .sched-table td { padding: 8px 8px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  .sched-table tr:last-child td { border-bottom: none; }
+  .sched-table input { font-size: 13px; padding: 5px 8px; border: 1px solid var(--gray-300); border-radius: 8px; font-family: inherit; background: #fff; color: var(--gray-900); width: 100%; outline: none; }
+  .sched-table input:focus { border-color: var(--brand); }
+  .sched-table input:disabled { background: var(--gray-100); color: var(--gray-400); }
+  .sched-table tr.final-row td { border-top: 1px dashed var(--gray-300); }
+
+  /* ── SYNC / PENDING CHANGES ── */
+  .sync-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 14px 16px; border-radius: var(--radius);
+    border: 1px solid var(--gray-200); margin-bottom: 10px;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .sync-row.pending { border-color: #fcd34d; background: #fffdf0; }
+  .sync-row.approved { border-color: #86efac; background: #f0fdf4; }
+  .sync-detail { font-size: 14px; font-weight: 600; color: var(--gray-900); margin-bottom: 3px; }
+  .sync-sub { font-size: 12px; color: var(--gray-500); line-height: 1.5; }
+  .sync-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+
+  /* ── ALERTS PANEL ── */
+  .alert-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-radius: var(--radius);
+    margin-bottom: 10px; gap: 12px; flex-wrap: wrap;
+  }
+  .alert-row.danger { background: var(--red-light); border: 1px solid #fca5a5; }
+  .alert-row.warn { background: var(--amber-light); border: 1px solid #fcd34d; }
+  .ar-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .ar-sub { font-size: 12px; opacity: 0.8; }
+
+  /* ── PAY TABLE ── */
+  .pay-history-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .pay-history-table th { font-size: 11px; font-weight: 700; color: var(--gray-400); text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--gray-200); text-transform: uppercase; letter-spacing: 0.04em; }
+  .pay-history-table td { padding: 11px 10px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  .pay-history-table tr:last-child td { border-bottom: none; }
+  .pay-history-table tr.summary-row td { font-weight: 600; border-top: 1px solid var(--gray-200); }
+
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .profile-two { grid-template-columns: 1fr; }
+    .pgrid { grid-template-columns: 1fr; }
+    .pitem.full { grid-column: 1; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-full { grid-column: 1; }
+    .app-body { padding: 1.25rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN
+════════════════════════════════════════════ -->
+<div class="login-screen" id="screen-login">
+  <div class="login-card">
+    <div class="brand-mark"><i class="ti ti-shield-check"></i></div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Admin sign in</div>
+    <div style="font-size:14px;color:var(--gray-500);margin-bottom:1.75rem;">GC Youth × Horizon Project — Admin Portal</div>
+    <div class="form-group"><label>Password</label><input type="password" placeholder="Enter admin password" id="login-pw" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="login-error" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px;align-items:center;gap:8px;"><i class="ti ti-alert-circle"></i><div></div></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;margin-top:6px;" onclick="doLogin()">
+      <i class="ti ti-lock"></i> Sign in to admin portal
+    </button>
+    <div style="font-size:12px;color:var(--gray-400);text-align:center;margin-top:12px;">
+      <i class="ti ti-shield-lock" style="font-size:13px;vertical-align:-2px;margin-right:3px"></i>
+      Admin access only. Participant? Use your portal link.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN ADMIN APP
+════════════════════════════════════════════ -->
+<div class="app-shell" id="admin-app">
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-icon"><i class="ti ti-shield-check"></i></div>
+      GC Youth Admin
+    </div>
+    <div class="nav-right">
+      <span class="nav-admin-tag"><i class="ti ti-shield" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Administrator</span>
+      <button class="btn btn-sm" onclick="showScreen('screen-login')"><i class="ti ti-logout"></i> Sign out</button>
+    </div>
+  </nav>
+
+  <div class="app-body">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:20px;font-weight:700;">GC Youth × Horizon Project</div>
+        <div style="font-size:13px;color:var(--gray-500);margin-top:2px;">September 2027 · Final cutoff: 1 Jul 2027</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="goTab('register')"><i class="ti ti-user-plus"></i> Add participant</button>
+        <button class="btn"><i class="ti ti-download"></i> Export CSV</button>
+        <button class="btn"><i class="ti ti-mail"></i> Message all</button>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Participants</div><div class="metric-value">12</div></div>
+      <div class="metric"><div class="metric-label">Profiles complete</div><div class="metric-value mv-blue">8 / 12</div></div>
+      <div class="metric"><div class="metric-label">Deposits received</div><div class="metric-value mv-green">10 / 12</div></div>
+      <div class="metric"><div class="metric-label">Overdue accounts</div><div class="metric-value mv-red">2</div></div>
+    </div>
+
+    <div class="tabs" id="adminTabs">
+      <button class="tab active" onclick="goTab('participants')"><i class="ti ti-users"></i> Participants</button>
+      <button class="tab" onclick="goTab('register')"><i class="ti ti-user-plus"></i> Register</button>
+      <button class="tab" onclick="goTab('profile')"><i class="ti ti-id-badge"></i> Student profile</button>
+      <button class="tab" onclick="goTab('schedule')"><i class="ti ti-calendar"></i> Payment schedule</button>
+      <button class="tab" onclick="goTab('pending')"><i class="ti ti-clock"></i> Pending changes <span class="bc">3</span></button>
+      <button class="tab" onclick="goTab('alerts')"><i class="ti ti-bell"></i> Alerts <span class="bc">2</span></button>
+    </div>
+
+    <!-- ── PARTICIPANTS ── -->
+    <div class="panel active" id="t-participants">
+      <div class="card">
+        <div class="filter-row">
+          <div class="filter-pills" id="fpills">
+            <button class="fpill on" onclick="doFilter('all',this)">All (12)</button>
+            <button class="fpill" onclick="doFilter('overdue',this)">Overdue (2)</button>
+            <button class="fpill" onclick="doFilter('incomplete',this)">Profile incomplete (4)</button>
+            <button class="fpill" onclick="doFilter('no-deposit',this)">No deposit (2)</button>
+            <button class="fpill" onclick="doFilter('paid',this)">Fully paid (3)</button>
+          </div>
+          <div class="search-wrap">
+            <i class="ti ti-search" style="font-size:14px;color:var(--gray-400)"></i>
+            <input type="text" placeholder="Search name or ID…" oninput="doSearch(this.value)">
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="table-layout:fixed;min-width:600px;">
+            <colgroup>
+              <col style="width:22%"><col style="width:13%"><col style="width:12%">
+              <col style="width:11%"><col style="width:11%"><col style="width:19%"><col style="width:12%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Participant</th><th>Profile</th><th>Deposit</th>
+                <th>Paid</th><th>Balance</th><th>Progress</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="ptBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REGISTER ── -->
+    <div class="panel" id="t-register">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">Register new participant</div>
+        <div class="alert alert-blue" style="margin-bottom:1.25rem;">
+          <i class="ti ti-info-circle"></i>
+          <div>Enter the basics — name, phone, and email. An invite will be sent and the student completes the rest themselves when they set up their account.</div>
+        </div>
+
+        <div id="regForm">
+          <div class="form-grid">
+            <div class="form-group"><label>First name</label><input type="text" id="r-fname" placeholder=""></div>
+            <div class="form-group"><label>Last name</label><input type="text" id="r-lname" placeholder=""></div>
+            <div class="form-group"><label>Mobile number</label><input type="tel" id="r-mobile" placeholder=""></div>
+            <div class="form-group"><label>Email address</label><input type="email" id="r-email" placeholder="" onkeydown="if(event.key==='Enter')saveParticipant()"></div>
+            <div class="form-group form-full"><label>Notes (optional — admin only)</label><textarea id="r-notes" rows="2" placeholder="" style="resize:vertical;font-family:inherit;font-size:13px;"></textarea></div>
+          </div>
+          <div id="reg-error" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:12px;align-items:center;gap:8px;">
+            <i class="ti ti-alert-circle"></i><div></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:1.25rem;">
+            <button class="btn btn-success" id="save-reg-btn" onclick="saveParticipant()"><i class="ti ti-send"></i> Register &amp; send invite</button>
+            <button class="btn" onclick="clearRegForm()"><i class="ti ti-x"></i> Clear</button>
+          </div>
+        </div>
+
+        <div id="regDone" style="display:none;">
+          <div class="alert alert-green" style="margin-bottom:1.25rem;">
+            <i class="ti ti-circle-check"></i>
+            <div><strong>Done!</strong> <span id="reg-done-name"></span> has been registered and their invite email is on its way. They'll appear in the participants list once their account is active.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="registerAnother()"><i class="ti ti-user-plus"></i> Register another</button>
+            <button class="btn" onclick="goTab('participants');loadParticipants()"><i class="ti ti-users"></i> View participants</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STUDENT PROFILE ── -->
+    <div class="panel" id="t-profile">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div class="av av-blue" style="width:52px;height:52px;font-size:16px;">JM</div>
+            <div>
+              <div style="font-size:18px;font-weight:700;" id="sp-name">Select a participant to view their profile</div>
+              <div style="font-size:13px;color:var(--gray-500);margin-top:2px;">Participant #2041 · jordan.m@email.com</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;">
+            <button class="btn btn-sm"><i class="ti ti-edit"></i> Edit</button>
+            <button class="btn btn-sm"><i class="ti ti-mail"></i> Message</button>
+            <button class="btn btn-sm"><i class="ti ti-receipt"></i> Receipts</button>
+            <button class="btn btn-primary btn-sm" onclick="goTab('schedule')"><i class="ti ti-calendar"></i> Payment schedule</button>
+          </div>
+        </div>
+
+        <div class="alert alert-amber">
+          <i class="ti ti-alert-triangle"></i>
+          <div>Passport details not yet confirmed. Medical info submitted — pending your review. <span style="text-decoration:underline;cursor:pointer;" onclick="goTab('pending')">Review now →</span></div>
+        </div>
+
+        <div class="profile-two">
+          <div>
+            <div class="pgroup">
+              <div class="pgroup-title">Personal details</div>
+              <div class="pgrid">
+                <div class="pitem"><label>Date of birth</label><span>12 Mar 2009 (age 17)</span></div>
+                <div class="pitem"><label>Gender</label><span>Male</span></div>
+                <div class="pitem"><label>Mobile</label><span>+61 412 345 678</span></div>
+                <div class="pitem"><label>Email</label><span>jordan.m@email.com</span></div>
+                <div class="pitem full"><label>Address</label><span>14 Church St, Penrith NSW 2750</span></div>
+              </div>
+            </div>
+            <div class="pgroup">
+              <div class="pgroup-title">Parent / guardian</div>
+              <div class="pgrid">
+                <div class="pitem"><label>Name</label><span id="sp-parent-name">—</span></div>
+                <div class="pitem"><label>Relationship</label><span>Mother</span></div>
+                <div class="pitem"><label>Mobile</label><span>+61 412 000 111</span></div>
+                <div class="pitem"><label>Email</label><span>linda.m@email.com</span></div>
+              </div>
+            </div>
+            <div class="pgroup">
+              <div class="pgroup-title">Emergency contact</div>
+              <div class="pgrid">
+                <div class="pitem"><label>Name</label><span>David Mitchell</span></div>
+                <div class="pitem"><label>Relationship</label><span>Father</span></div>
+                <div class="pitem"><label>Mobile</label><span>+61 412 111 222</span></div>
+                <div class="pitem"><label>Email</label><span>david.m@email.com</span></div>
+              </div>
+            </div>
+            <div class="pgroup">
+              <div class="pgroup-title">Church &amp; group</div>
+              <div class="pgrid">
+                <div class="pitem"><label>Church</label><span>GC Church Penrith</span></div>
+                <div class="pitem"><label>Small group</label><span>—</span></div>
+                <div class="pitem"><label>Years attending</label><span>3 years</span></div>
+                <div class="pitem"><label>Baptised</label><span>Yes</span></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="pgroup">
+              <div class="pgroup-title">Medical &amp; dietary <span class="badge b-amber" style="margin-left:6px;">Pending review</span></div>
+              <div class="pgrid">
+                <div class="pitem"><label>Allergies</label><span>—</span></div>
+                <div class="pitem"><label>Dietary</label><span>No restrictions</span></div>
+                <div class="pitem"><label>Medicare no.</label><span>2345 6789 0 / 1</span></div>
+                <div class="pitem"><label>Blood type</label><span>A+</span></div>
+                <div class="pitem"><label>EpiPen</label><span>Yes</span></div>
+                <div class="pitem"><label>Inhaler</label><span>Yes (Ventolin)</span></div>
+              </div>
+            </div>
+            <div class="pgroup">
+              <div class="pgroup-title">Passport &amp; travel</div>
+              <div class="pgrid">
+                <div class="pitem"><label>Passport no.</label><span class="p-missing">Pending — not yet entered</span></div>
+                <div class="pitem"><label>Expiry</label><span class="p-missing">Pending</span></div>
+                <div class="pitem"><label>Nationality</label><span>Australian</span></div>
+                <div class="pitem"><label>Visa required</label><span>No</span></div>
+              </div>
+            </div>
+            <div class="pgroup">
+              <div class="pgroup-title">Participant journey</div>
+              <div class="journey">
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Profile created</div><div class="j-sub">Admin · 14 Jan 2025</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Invite sent &amp; account activated</div><div class="j-sub">15 Jan 2025 · Jordan accepted invite</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Payment schedule set</div><div class="j-sub">Admin · 18 Jan 2025</div></div></div>
+                <div class="j-step"><div class="j-dot done"><i class="ti ti-check" style="font-size:9px"></i></div><div class="j-line"></div><div><div class="j-title">Deposit paid</div><div class="j-sub">$500 · 1 Mar 2025 · Portal unlocked</div></div></div>
+                <div class="j-step"><div class="j-dot now" style="font-size:8px">···</div><div class="j-line"></div><div><div class="j-title">Ongoing payments</div><div class="j-sub">$1,000 paid · $2,450 remaining</div></div></div>
+                <div class="j-step"><div class="j-dot future">6</div><div class="j-line"></div><div><div class="j-title">Fully paid</div><div class="j-sub">Due by 1 Jul 2027</div></div></div>
+              </div>
+            </div>
+            <div class="pgroup">
+              <div class="pgroup-title">Admin notes</div>
+              <textarea style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);min-height:80px;resize:vertical;outline:none;" placeholder="Add a note about this participant…">Keen participant, parents very supportive. Mum Linda is best contact. Need to chase passport docs before Feb end.</textarea>
+              <button class="btn btn-sm" style="margin-top:8px;"><i class="ti ti-device-floppy"></i> Save note</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAYMENT SCHEDULE ── -->
+    <div class="panel" id="t-schedule">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Payment schedule</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;color:var(--gray-500);">Participant:</span>
+            <select style="font-size:13px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:var(--radius);font-family:inherit;background:#fff;color:var(--gray-900);outline:none;">
+<option value="">Select participant…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="alert alert-green" style="margin-bottom:1.25rem;">
+          <i class="ti ti-info-circle"></i>
+          <div>The <strong>deposit ($500)</strong> is fixed and required before the student can access their portal. All other milestones are editable. Students may pay in any instalment amounts as long as the full balance is cleared by the final cutoff date.</div>
+        </div>
+
+        <table class="sched-table">
+          <thead>
+            <tr><th>Milestone</th><th>Due date</th><th>Target ($)</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Deposit</strong> <span class="badge b-purple" style="margin-left:4px;">Required</span></td>
+              <td><input type="date" value="2025-03-01" disabled></td>
+              <td><input type="text" value="500" disabled></td>
+              <td><span class="badge b-green">Paid</span></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>Payment 1</td>
+              <td><input type="date" value="2025-06-01"></td>
+              <td><input type="number" value="500" min="0"></td>
+              <td><span class="badge b-green">Paid</span></td>
+              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
+            </tr>
+            <tr>
+              <td>Payment 2</td>
+              <td><input type="date" value="2026-03-01"></td>
+              <td><input type="number" value="500" min="0"></td>
+              <td><span class="badge b-blue">Due soon</span></td>
+              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
+            </tr>
+            <tr>
+              <td>Payment 3</td>
+              <td><input type="date" value="2026-06-01"></td>
+              <td><input type="number" value="500" min="0"></td>
+              <td><span class="badge b-gray">Upcoming</span></td>
+              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
+            </tr>
+            <tr>
+              <td>Payment 4</td>
+              <td><input type="date" value="2026-09-01"></td>
+              <td><input type="number" value="500" min="0"></td>
+              <td><span class="badge b-gray">Upcoming</span></td>
+              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
+            </tr>
+            <tr>
+              <td>Payment 5</td>
+              <td><input type="date" value="2026-12-01"></td>
+              <td><input type="number" value="500" min="0"></td>
+              <td><span class="badge b-gray">Upcoming</span></td>
+              <td><button class="btn btn-sm btn-danger" style="padding:3px 8px;">×</button></td>
+            </tr>
+            <tr class="final-row">
+              <td><strong>Final cutoff</strong> <span class="badge b-red" style="margin-left:4px;">Deadline</span></td>
+              <td><input type="date" value="2027-07-01"></td>
+              <td><input type="text" value="Balance" disabled></td>
+              <td><span class="badge b-gray">Upcoming</span></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="display:flex;align-items:center;gap:8px;margin-top:1.25rem;flex-wrap:wrap;">
+          <button class="btn btn-success"><i class="ti ti-check"></i> Save schedule</button>
+          <button class="btn"><i class="ti ti-plus"></i> Add milestone</button>
+          <span style="font-size:13px;color:var(--gray-500);margin-left:auto;">Total scheduled: <strong style="color:var(--gray-900);">$3,000 + balance = $3,450</strong></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">Payment history</div>
+        <table class="pay-history-table">
+          <colgroup><col style="width:36%"><col style="width:20%"><col style="width:26%"><col style="width:18%"></colgroup>
+          <thead><tr><th>Description</th><th>Date</th><th>Reference</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>
+<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--gray-400);">Select a participant to view their payment history.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PENDING CHANGES ── -->
+    <div class="panel" id="t-pending">
+      <div class="alert alert-blue">
+        <i class="ti ti-info-circle"></i>
+        <div>When a student submits a profile section, it appears here. Approving locks the section on their profile. Students must request an edit, which you approve before unlocking.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">Pending review (2)</div>
+        <div class="sync-row pending" id="pr-1">
+          <div>
+            <div class="sync-detail">Pending review</div>
+            <div class="sync-sub">Student submitted details will appear here</div>
+          </div>
+          <div class="sync-actions">
+            <button class="btn btn-sm" onclick="goTab('profile')"><i class="ti ti-eye"></i> View profile</button>
+            <button class="btn btn-success btn-sm" onclick="approveChange('pr-1','','Medical')"><i class="ti ti-check"></i> Approve</button>
+            <button class="btn btn-danger btn-sm">Reject</button>
+          </div>
+        </div>
+        <div class="sync-row pending" id="pr-2">
+          <div>
+            <div class="sync-detail">Pending review</div>
+            <div class="sync-sub">Submitted 16 May 2026 · Passport: PA9876543 · Expiry: 12 Jun 2031 · Nationality: Australian · Visa: No</div>
+          </div>
+          <div class="sync-actions">
+            <button class="btn btn-sm"><i class="ti ti-eye"></i> View profile</button>
+            <button class="btn btn-success btn-sm" onclick="approveChange('pr-2','','Passport')"><i class="ti ti-check"></i> Approve</button>
+            <button class="btn btn-danger btn-sm">Reject</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">Edit requests (1)</div>
+        <div class="sync-row pending" id="pr-3">
+          <div>
+            <div class="sync-detail">Edit request</div>
+            <div class="sync-sub">Reason: "Phone number has changed" · Submitted 15 May 2026</div>
+          </div>
+          <div class="sync-actions">
+            <button class="btn btn-primary btn-sm" onclick="approveChange('pr-3','Sam O\'Brien','Emergency contact unlocked')">Unlock for edit</button>
+            <button class="btn btn-danger btn-sm">Decline</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">Recently approved</div>
+        <div class="sync-row approved">
+          <div><div class="sync-detail">—</div><div class="sync-sub">Approved sections appear here</div></div>
+          <span class="badge b-green">Approved</span>
+        </div>
+        <div class="sync-row approved">
+          <div><div class="sync-detail">—</div><div class="sync-sub">Approved sections appear here</div></div>
+          <span class="badge b-green">Approved</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALERTS ── -->
+    <div class="panel" id="t-alerts">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">Accounts needing attention</div>
+        <div class="alert-row danger">
+          <div>
+            <div class="ar-title" style="color:var(--red)">— Payment overdue</div>
+            <div class="ar-sub" style="color:var(--red)">Overdue details will appear here once participants are registered</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-sm" onclick="goTab('profile')"><i class="ti ti-eye"></i> View</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Send reminder</button>
+          </div>
+        </div>
+        <div class="alert-row danger" style="margin-bottom:1.25rem;">
+          <div>
+            <div class="ar-title" style="color:var(--red)">— Deposit not yet received</div>
+            <div class="ar-sub" style="color:var(--red)">Deposit due 1 Mar 2025 · $500 required · $0 paid · Portal locked</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-sm"><i class="ti ti-eye"></i> View</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Send reminder</button>
+          </div>
+        </div>
+
+        <div class="card-title" style="margin-bottom:1rem;">Upcoming — due in 12 days (1 Mar 2026)</div>
+        <div class="alert-row warn">
+          <div>
+            <div class="ar-title" style="color:var(--amber)">5 participants — Payment 2 due 1 Mar 2026</div>
+            <div class="ar-sub" style="color:var(--amber)">Jordan M, Priya K, Sam O, Lena B, Chris F · $500 each</div>
+          </div>
+          <button class="btn btn-primary btn-sm"><i class="ti ti-mail"></i> Remind all</button>
+        </div>
+
+        <div class="card-title" style="margin-bottom:1rem;margin-top:1.25rem;">Profile completion issues</div>
+        <div class="alert-row warn">
+          <div>
+            <div class="ar-title" style="color:var(--amber)">4 participants — Profile incomplete</div>
+            <div class="ar-sub" style="color:var(--amber)">Participants with incomplete profiles will be listed here</div>
+          </div>
+          <button class="btn btn-sm"><i class="ti ti-mail"></i> Send nudge</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /app-body -->
+</div><!-- /admin-app -->
+
+<script>
+  // ── Apps Script endpoint ──
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9bDSmmC_qnwBiY5OZe_caVkGSKWtuoEcOJGCrGTI8w_s4p4POuh94Uu01p5b6IzXk/exec';
+  const ADMIN_PASSWORD  = 'gcyouth2027'; // Change to match Code.gs
+
+  // ── Helpers ──
+  function $(id) { return document.getElementById(id); }
+  function v(id) { const e=$(id); return e ? e.value.trim() : ''; }
+  function setBtn(id, loading, label) { const b=$(id); if(!b)return; b.disabled=loading; b.innerHTML=loading?'<span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:6px;"></span>Please wait…':label; }
+  // ── Call Apps Script via JSONP (bypasses CORS restriction) ──
+  function callAS(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'cb_' + fn + '_' + Date.now();
+      const url = APPS_SCRIPT_URL
+        + '?fn='       + encodeURIComponent(fn)
+        + '&args='     + encodeURIComponent(JSON.stringify(args))
+        + '&callback=' + cbName;
+
+      window[cbName] = function(data) {
+        resolve(data);
+        delete window[cbName];
+        document.getElementById(cbName) && document.getElementById(cbName).remove();
+      };
+
+      const script = document.createElement('script');
+      script.id  = cbName;
+      script.src = url;
+      script.onerror = function() {
+        reject(new Error('Apps Script connection failed.'));
+        delete window[cbName];
+        script.remove();
+      };
+      setTimeout(() => {
+        if (window[cbName]) {
+          reject(new Error('Apps Script request timed out.'));
+          delete window[cbName];
+          script.remove();
+        }
+      }, 15000);
+      document.head.appendChild(script);
+    });
+  }
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(style);
+
+  // ── Login ──
+  function showScreen(id) {
+    document.getElementById('screen-login').style.display = id === 'screen-login' ? 'flex' : 'none';
+    document.getElementById('admin-app').style.display = id === 'admin-app' ? 'block' : 'none';
+  }
+
+  function doLogin() {
+    const pw    = document.getElementById('login-pw').value;
+    const errEl = document.getElementById('login-error');
+
+    function showErr(msg) {
+      if (errEl) { errEl.style.display='flex'; errEl.querySelector('div').textContent=msg; }
+      else alert(msg);
+    }
+
+    if (!pw) { showErr('Please enter your password.'); return; }
+    if (pw !== ADMIN_PASSWORD) {
+      showErr('Incorrect password. Please try again.');
+      document.getElementById('login-pw').value = '';
+      document.getElementById('login-pw').focus();
+      return;
+    }
+
+    if (errEl) errEl.style.display = 'none';
+    showScreen('admin-app');
+
+    // Load participants in background — don't block login
+    setTimeout(() => loadParticipants(), 100);
+  }
+
+  // ── Load participants from Apps Script ──
+  async function loadParticipants() {
+    document.getElementById('ptBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400);"><span style="display:inline-block;width:18px;height:18px;border:2px solid rgba(0,0,0,.15);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-4px;margin-right:8px;"></span>Loading participants…</td></tr>';
+    try {
+      const parts = await callAS('getAllParticipants');
+      if (parts.error) { console.error(parts.error); return; }
+      allParticipants = parts;
+      renderTable(parts);
+    } catch(e) {
+      console.error('Load error:', e);
+    }
+  }
+
+  // ── Save new participant (simple form) ──
+  async function saveParticipant() {
+    const fn    = v('r-fname');
+    const ln    = v('r-lname');
+    const email = v('r-email');
+    const errEl = $('reg-error');
+
+    function showRegErr(msg) {
+      if (errEl) { errEl.style.display='flex'; errEl.querySelector('div').textContent=msg; }
+      else alert(msg);
+    }
+
+    if (!fn)    { showRegErr('Please enter a first name.'); return; }
+    if (!ln)    { showRegErr('Please enter a last name.'); return; }
+    if (!email) { showRegErr('Please enter an email address.'); return; }
+    if (errEl)    errEl.style.display = 'none';
+
+    setBtn('save-reg-btn', true, '<i class="ti ti-send"></i> Sending invite…');
+
+    try {
+      const data = {
+        firstName: fn,
+        lastName:  ln,
+        email:     email,
+        mobile:    v('r-mobile'),
+        notes:     v('r-notes'),
+      };
+
+      const res = await callAS('registerParticipant', data);
+      if (!res || res.error) {
+        showRegErr(res && res.error ? res.error : 'Could not connect. Make sure Apps Script is deployed as a Web App with access set to Anyone.');
+        setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
+        return;
+      }
+
+      // Send invite email
+      const inviteRes = await callAS('sendInviteEmail', res.id);
+      if (inviteRes && inviteRes.error) console.warn('Invite email warning:', inviteRes.error);
+
+      setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
+      $('regForm').style.display = 'none';
+      $('regDone').style.display = 'block';
+      $('reg-done-name').textContent = fn + ' ' + ln;
+      loadParticipants();
+    } catch(e) {
+      setBtn('save-reg-btn', false, '<i class="ti ti-send"></i> Register & send invite');
+      showRegErr('Connection error. Please try again.');
+    }
+  }
+
+  function clearRegForm() {
+    ['r-fname','r-lname','r-mobile','r-email','r-notes'].forEach(id => {
+      const el = $(id); if (el) el.value = '';
+    });
+    const errEl = $('reg-error');
+    if (errEl) errEl.style.display = 'none';
+  }
+
+  function registerAnother() {
+    clearRegForm();
+    $('regForm').style.display = 'block';
+    $('regDone').style.display = 'none';
+  }
+
+  // ── Tab navigation ──
+  const tabNames = ['participants','register','profile','schedule','pending','alerts'];
+
+  function goTab(name) {
+    tabNames.forEach((t, i) => {
+      document.querySelectorAll('.tabs .tab')[i].classList.toggle('active', t === name);
+      document.getElementById('t-' + t).classList.toggle('active', t === name);
+    });
+  }
+
+  // ── Participant data ──
+  const participants = [];  // loaded from Google Sheet via loadParticipants()
+
+  let curFilter = 'all';
+
+  function pct(p) { return Math.round((p.paid / p.total) * 100); }
+  function barColor(p) {
+    if (p.status === 'overdue') return '#ef4444';
+    if (p.status === 'paid') return '#2d7a3a';
+    if (p.status === 'no-deposit') return '#f59e0b';
+    return '#3b72c8';
+  }
+
+  function statusBadge(p) {
+    if (p.status === 'paid') return '<span class="badge b-green">Fully paid</span>';
+    if (p.status === 'overdue') return '<span class="badge b-red">Overdue</span>';
+    if (p.status === 'no-deposit') return '<span class="badge b-amber">No deposit</span>';
+    return '<span class="badge b-blue">On track</span>';
+  }
+
+  function renderTable(list) {
+    document.getElementById('ptBody').innerHTML = list.map(p => `
+      <tr class="clickrow" onclick="goTab('profile')">
+        <td>
+          <div class="namecell">
+            <div class="av ${p.av}">${p.ini}</div>
+            <div>
+              <div style="font-weight:600">${p.name}</div>
+              <div style="font-size:12px;color:var(--gray-400)">#${2040 + p.id}</div>
+            </div>
+          </div>
+        </td>
+        <td>${p.profileOk ? '<span class="badge b-green">Complete</span>' : '<span class="badge b-amber">Incomplete</span>'}</td>
+        <td>${p.deposit ? '<span class="badge b-green">Paid</span>' : '<span class="badge b-red">None</span>'}</td>
+        <td style="font-weight:600;color:var(--green)">$${p.paid.toLocaleString()}</td>
+        <td style="color:var(--gray-500)">$${(p.total - p.paid).toLocaleString()}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="mini-bar-wrap"><div class="mini-bar" style="width:${pct(p)}%;background:${barColor(p)}"></div></div>
+            <span style="font-size:12px;color:var(--gray-400)">${pct(p)}%</span>
+            ${statusBadge(p)}
+          </div>
+        </td>
+        <td><span style="font-size:13px;color:var(--brand);font-weight:500;cursor:pointer">View →</span></td>
+      </tr>`).join('');
+  }
+
+  function doFilter(f, btn) {
+    curFilter = f;
+    document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    let list = participants;
+    if (f === 'overdue') list = list.filter(p => p.status === 'overdue');
+    else if (f === 'incomplete') list = list.filter(p => !p.profileOk);
+    else if (f === 'no-deposit') list = list.filter(p => !p.deposit);
+    else if (f === 'paid') list = list.filter(p => p.status === 'paid');
+    renderTable(list);
+  }
+
+  function doSearch(v) {
+    v = v.toLowerCase();
+    let list = participants;
+    if (curFilter !== 'all') {
+      if (curFilter === 'overdue') list = list.filter(p => p.status === 'overdue');
+      else if (curFilter === 'incomplete') list = list.filter(p => !p.profileOk);
+      else if (curFilter === 'no-deposit') list = list.filter(p => !p.deposit);
+      else if (curFilter === 'paid') list = list.filter(p => p.status === 'paid');
+    }
+    list = list.filter(p => p.name.toLowerCase().includes(v) || String(2040 + p.id).includes(v));
+    renderTable(list);
+  }
+
+  // ── Stepper ──
+  let curStep = 1;
+  const totalSteps = 5;
+  const stepLabels = ['Personal', 'Parent / guardian', 'Medical', 'Passport & travel', 'Church & group'];
+
+
+
+  function resetReg() {
+    curStep = 1;
+    showStep(1);
+    document.getElementById('regDone').style.display = 'none';
+  }
+
+  // ── Approve pending change ──
+  function approveChange(rowId, name, section) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    row.classList.remove('pending');
+    row.classList.add('approved');
+    row.querySelector('.sync-actions').innerHTML = '<span class="badge b-green"><i class="ti ti-check" style="font-size:10px;vertical-align:-1px;margin-right:3px"></i>Approved &amp; synced</span>';
+  }
+
+  // ── Init ──
+  renderTable(participants);
+</script>
+</body>
+</html>
