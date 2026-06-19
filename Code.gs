@@ -11,11 +11,11 @@
 //  6. Deploy as Web App (Execute as: Me, Access: Anyone)
 // ═══════════════════════════════════════════════════════════
 
-const SHEET_ID               = 'YOUR_GOOGLE_SHEET_ID_HERE';
+const SHEET_ID               = 'https://docs.google.com/spreadsheets/d/10YQHHT9ON-kFfBtQNUn532-FfKJHy1DnE4_yiz93Z4M/edit?usp=sharing';
 const ADMIN_PASSWORD         = 'gcyouth2027';
 const NOREPLY_NAME           = 'GC Youth Missions';
-const YOUTH_COORDINATOR_EMAIL = 'youth@gcchurch.com';   // fallback if no leader assigned
-const PORTAL_URL             = 'YOUR_NETLIFY_URL_HERE'; // e.g. https://gcyouth.netlify.app
+const YOUTH_COORDINATOR_EMAIL = 'isaac.mitchell@generocitychurch.com';   // fallback if no leader assigned
+const PORTAL_URL             = 'https://missionsportal.isaacmitchell0803.workers.dev/'; // e.g. https://gcyouth.netlify.app
 
 const TRIP_NAME    = 'GC Youth × Horizon Project';
 const TRIP_DATE    = 'September 2027';
